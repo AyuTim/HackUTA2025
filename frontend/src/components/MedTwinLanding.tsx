@@ -12,6 +12,7 @@ import {
   SmartphoneNfc,
   ChevronRight,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const Section = ({
   id,
@@ -36,6 +37,8 @@ const Glow = ({ className = "" }: { className?: string }) => (
 );
 
 export default function MedTwinLanding() {
+  const router = useRouter();
+  
   return (
     <div className="min-h-screen bg-[#0b0f14] text-zinc-100 relative overflow-hidden">
       <Glow />
@@ -256,7 +259,10 @@ export default function MedTwinLanding() {
               </p>
             </div>
             <div className="flex gap-3 md:justify-end">
-              <button className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-3 font-semibold shadow-lg shadow-blue-500/20">
+              <button
+                onClick={() => router.push("/profile")}
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-3 font-semibold shadow-lg shadow-blue-500/20 hover:scale-[1.02] transition"
+              >
                 Create your Twin
               </button>
               <button className="rounded-xl bg-white/10 px-6 py-3 border border-white/10">
