@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Upload, User, HeartPulse, Ruler, FileText, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ProfileCreation() {
   const [fileName, setFileName] = useState<string>("");
+  const router = useRouter();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,9 +36,12 @@ export default function ProfileCreation() {
             </div>
             <span className="font-semibold tracking-wide">MedTwin</span>
           </div>
-          <button className="rounded-xl bg-gradient-to-r from-blue-500 to-red-600 px-4 py-2 text-sm font-semibold shadow-lg shadow-red-500/20">
+          <button
+            onClick={() => router.push("/")}
+            className="rounded-xl bg-gradient-to-r from-blue-500 to-red-600 px-4 py-2 text-sm font-semibold shadow-lg shadow-red-500/20 hover:scale-[1.03] transition"
+            >
             Home
-          </button>
+        </button>
         </div>
       </nav>
 
