@@ -1,5 +1,9 @@
 "use client";
 import GlossaryHighlighter from "@/components/GlossaryHighlighter";
+import dynamic from "next/dynamic";
+
+// AvatarCanvas uses three.js and must be client-only. We dynamically import it to avoid SSR issues.
+const AvatarCanvas = dynamic(() => import("@/components/AvatarCanvas"), { ssr: false });
 import { MED_GLOSSARY } from "../medGlossary";
 import React from "react";
 import { motion } from "framer-motion";
@@ -121,13 +125,11 @@ export default function MedTwinLanding() {
             </div>
           </div>
 
-          {/* 3D Canvas Placeholder */}
+          {/* 3D Avatar Canvas */}
           <div className="relative">
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-900 to-zinc-800 p-3 shadow-2xl">
-              <div className="aspect-[4/5] rounded-2xl bg-black/50 grid place-items-center text-zinc-400">
-                <span className="text-sm">Three.js 3D Avatar Canvas</span>
-              </div>
-            </div>
+            {/* AvatarCanvas loads the GLB from /models/soumika.glb */}
+            {/* Slightly higher (less negative) offsetY and a larger scale */}
+            <AvatarCanvas modelPath="/models/soumika.glb" offsetY={-0.1} scale={1.15} />
             <div className="absolute -inset-6 -z-10 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-indigo-400/20 blur-3xl rounded-[2rem]" />
           </div>
         </div>
