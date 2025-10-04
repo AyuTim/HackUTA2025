@@ -30,39 +30,39 @@ const Section = ({
 const Glow = ({ className = "" }: { className?: string }) => (
   <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_40%,black,transparent)]">
     <div
-      className={`absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-500/20 via-cyan-400/10 to-indigo-500/20 blur-3xl ${className}`}
+      className={`absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-600/15 via-red-600/10 to-blue-600/15 blur-3xl ${className}`}
     />
   </div>
 );
 
 export default function MedTwinLanding() {
   return (
-    <div className="min-h-screen bg-[#0b0f14] text-zinc-100 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
       <Glow />
       {/* NAV */}
-      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/30 bg-black/10 border-b border-white/10">
+      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/50 bg-black/30 border-b border-red-500/20">
         <Section className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 grid place-items-center">
-              <Sparkles size={16} />
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-red-600 grid place-items-center shadow-lg shadow-blue-600/30 spider-pulse">
+              <Sparkles size={16} className="text-white spider-glow" />
             </div>
-            <span className="font-semibold tracking-wide">MedTwin</span>
+            <span className="font-bold tracking-wide text-lg spider-text-glow">MedTwin</span>
           </div>
-          <div className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
-            <a href="#features" className="hover:text-white">
+          <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
+            <a href="#features" className="hover:text-blue-400 transition-colors duration-300 neon-flicker">
               Features
             </a>
-            <a href="#preview" className="hover:text-white">
+            <a href="#preview" className="hover:text-red-400 transition-colors duration-300 neon-flicker">
               Preview
             </a>
-            <a href="#how" className="hover:text-white">
+            <a href="#how" className="hover:text-blue-400 transition-colors duration-300 neon-flicker">
               How it works
             </a>
-            <a href="#cta" className="hover:text-white">
+            <a href="#cta" className="hover:text-red-400 transition-colors duration-300 neon-flicker">
               Get started
             </a>
           </div>
-          <button className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-500/20">
+          <button className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse">
             Launch App
           </button>
         </Section>
@@ -79,12 +79,12 @@ export default function MedTwinLanding() {
               className="text-4xl md:text-6xl font-bold leading-tight"
             >
               Your{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-500 to-indigo-300">
+              <span className="spider-gradient-text">
                 digital twin
               </span>{" "}
               for personal health.
             </motion.h1>
-            <p className="mt-4 text-zinc-300 max-w-xl">
+            <p className="mt-4 text-gray-300 max-w-xl">
               Upload scans and checkups, visualize a 3D body, simulate what-if
               scenarios, and carry a tap-to-share health pass. Built for
               clarity, privacy, and control.
@@ -92,7 +92,7 @@ export default function MedTwinLanding() {
             <div className="mt-6 flex flex-wrap gap-3">
               <a
                 href="#preview"
-                className="group inline-flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-5 py-3 border border-white/10"
+                className="group inline-flex items-center gap-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 px-5 py-3 border border-blue-600/30 hover:border-blue-600/50 transition-all duration-300 web-sway"
               >
                 See the demo{" "}
                 <ChevronRight
@@ -102,32 +102,35 @@ export default function MedTwinLanding() {
               </a>
               <a
                 href="#cta"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-5 py-3 font-semibold shadow-lg shadow-blue-500/20"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-5 py-3 font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse"
               >
                 Get started
               </a>
             </div>
-            <div className="mt-6 flex gap-6 text-xs text-zinc-400">
+            <div className="mt-6 flex gap-6 text-xs text-gray-400">
               <div className="flex items-center gap-2">
-                <Shield size={14} /> HIPAA-aware design
+                <Shield size={14} className="text-blue-400 spider-glow" /> HIPAA-aware design
               </div>
               <div className="flex items-center gap-2">
-                <Cpu size={14} /> AI what-ifs
+                <Cpu size={14} className="text-red-400 spider-glow" /> AI what-ifs
               </div>
               <div className="flex items-center gap-2">
-                <SmartphoneNfc size={14} /> NFC/QR pass
+                <SmartphoneNfc size={14} className="text-blue-400 spider-glow" /> NFC/QR pass
               </div>
             </div>
           </div>
 
           {/* 3D Canvas Placeholder */}
-          <div className="relative">
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-900 to-zinc-800 p-3 shadow-2xl">
-              <div className="aspect-[4/5] rounded-2xl bg-black/50 grid place-items-center text-zinc-400">
-                <span className="text-sm">Three.js 3D Avatar Canvas</span>
+          <div className="relative spider-float">
+            <div className="rounded-3xl border border-blue-600/30 bg-gradient-to-br from-gray-900 to-black p-3 shadow-2xl shadow-blue-600/20">
+              <div className="aspect-[4/5] rounded-2xl bg-gradient-to-br from-blue-600/10 to-red-600/10 grid place-items-center text-gray-300 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-red-600/5" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-pulse" />
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-500/5 to-transparent animate-pulse" />
+                <span className="text-sm relative z-10 spider-text-glow">Three.js 3D Avatar Canvas</span>
               </div>
             </div>
-            <div className="absolute -inset-6 -z-10 bg-gradient-to-r from-blue-500/20 via-cyan-500/10 to-indigo-400/20 blur-3xl rounded-[2rem]" />
+            <div className="absolute -inset-6 -z-10 bg-gradient-to-r from-blue-600/20 via-red-600/10 to-blue-600/20 blur-3xl rounded-[2rem] spider-glow" />
           </div>
         </div>
       </Section>
@@ -154,11 +157,11 @@ export default function MedTwinLanding() {
           ].map((f, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-lg shadow-black/30"
+              className="rounded-2xl border border-blue-600/20 bg-gradient-to-br from-gray-900/80 to-black/50 p-5 shadow-lg shadow-blue-600/10 hover:shadow-red-600/20 hover:border-red-600/30 transition-all duration-300 hover:scale-105 web-sway"
             >
-              <div className="mb-3 text-blue-400">{f.icon}</div>
-              <h3 className="font-semibold mb-1">{f.title}</h3>
-              <p className="text-sm text-zinc-300">{f.text}</p>
+              <div className="mb-3 text-blue-400 spider-glow">{f.icon}</div>
+              <h3 className="font-semibold mb-1 text-white">{f.title}</h3>
+              <p className="text-sm text-gray-300">{f.text}</p>
             </div>
           ))}
         </div>
@@ -166,35 +169,38 @@ export default function MedTwinLanding() {
 
       {/* PREVIEW */}
       <Section id="preview" className="py-16">
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-zinc-900 to-zinc-800 p-6 shadow-2xl">
+        <div className="rounded-3xl border border-blue-600/30 bg-gradient-to-b from-gray-900 to-black p-6 shadow-2xl shadow-blue-600/20 spider-float">
           <div className="grid lg:grid-cols-2 gap-8 items-center">
             <div className="space-y-3">
-              <h2 className="text-2xl font-bold">Live dashboard preview</h2>
-              <p className="text-zinc-300">
+              <h2 className="text-2xl font-bold spider-text-glow">Live dashboard preview</h2>
+              <p className="text-gray-300">
                 Timeline, vitals, adherence heatmap, and an AI doctor chat that
                 cites your own records.
               </p>
-              <ul className="text-sm text-zinc-300 list-disc list-inside">
+              <ul className="text-sm text-gray-300 list-disc list-inside">
                 <li>Plain-English summaries from uploads</li>
                 <li>NFC/QR emergency pass in one tap</li>
                 <li>Private-by-default, on your device</li>
               </ul>
               <div className="pt-2 flex gap-3">
-                <button className="rounded-xl bg-white/10 px-4 py-2 border border-white/10">
+                <button className="rounded-xl bg-blue-600/10 px-4 py-2 border border-blue-600/30 hover:bg-blue-600/20 transition-all duration-300 web-sway">
                   Open Dashboard
                 </button>
-                <button className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-4 py-2 font-semibold">
+                <button className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse">
                   Try What-If
                 </button>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-              <div className="aspect-video rounded-xl bg-[linear-gradient(120deg,#151a22,#0f141a)] relative overflow-hidden">
+            <div className="rounded-2xl border border-red-600/30 bg-black/60 p-4">
+              <div className="aspect-video rounded-xl bg-gradient-to-br from-blue-600/10 to-red-600/10 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-60 [mask-image:radial-gradient(50%_70%_at_50%_50%,white,transparent)]">
-                  <div className="absolute -inset-24 bg-[conic-gradient(from_120deg,rgba(59,130,246,0.25),rgba(14,165,233,0.15),rgba(129,140,248,0.2))] blur-2xl" />
+                  <div className="absolute -inset-24 bg-[conic-gradient(from_120deg,rgba(59,130,246,0.25),rgba(220,38,38,0.15),rgba(59,130,246,0.2))] blur-2xl" />
                 </div>
-                <div className="absolute inset-0 grid place-items-center text-sm text-zinc-400">
-                  Embed your dashboard preview here
+                <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-blue-500 rounded-full animate-spin mx-auto mb-2"></div>
+                    <p>Embed your dashboard preview here</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,7 +210,7 @@ export default function MedTwinLanding() {
 
       {/* HOW IT WORKS */}
       <Section id="how" className="py-16">
-        <h2 className="text-2xl font-bold mb-6">How it works</h2>
+        <h2 className="text-2xl font-bold mb-6 spider-text-glow">How it works</h2>
         <div className="grid md:grid-cols-4 gap-4 text-sm">
           {[
             {
@@ -230,13 +236,13 @@ export default function MedTwinLanding() {
           ].map((s, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-white/10 bg-white/5 p-5"
+              className="rounded-2xl border border-blue-600/20 bg-gradient-to-br from-gray-900/80 to-black/50 p-5 hover:border-red-600/30 transition-all duration-300 hover:scale-105 web-sway"
             >
-              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-400 to-white/30 leading-none">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-500 to-red-600 leading-none spider-gradient-text">
                 {s.step}
               </div>
-              <div className="mt-2 font-semibold">{s.title}</div>
-              <p className="text-zinc-300">{s.text}</p>
+              <div className="mt-2 font-semibold text-white">{s.title}</div>
+              <p className="text-gray-300">{s.text}</p>
             </div>
           ))}
         </div>
@@ -244,22 +250,23 @@ export default function MedTwinLanding() {
 
       {/* CTA */}
       <Section id="cta" className="py-20">
-        <div className="relative rounded-3xl overflow-hidden border border-white/10">
+        <div className="relative rounded-3xl overflow-hidden border border-blue-600/30 spider-float">
           <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(59,130,246,0.25),transparent)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_100%,rgba(220,38,38,0.15),transparent)]" />
           <div className="relative p-10 md:p-14 grid md:grid-cols-[1.2fr_.8fr] gap-8 items-center">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold">
+              <h2 className="text-3xl md:text-4xl font-bold spider-text-glow">
                 Be part of the human-health evolution
               </h2>
-              <p className="mt-2 text-zinc-300">
+              <p className="mt-2 text-gray-300">
                 Own your data. See it. Understand it. Share it safely.
               </p>
             </div>
             <div className="flex gap-3 md:justify-end">
-              <button className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-3 font-semibold shadow-lg shadow-blue-500/20">
+              <button className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-6 py-3 font-semibold shadow-lg shadow-blue-600/40 hover:shadow-red-600/40 transition-all duration-300 hover:scale-105 spider-pulse">
                 Create your Twin
               </button>
-              <button className="rounded-xl bg-white/10 px-6 py-3 border border-white/10">
+              <button className="rounded-xl bg-blue-600/10 px-6 py-3 border border-blue-600/30 hover:bg-blue-600/20 transition-all duration-300 web-sway">
                 Learn more
               </button>
             </div>
@@ -268,7 +275,7 @@ export default function MedTwinLanding() {
       </Section>
 
       {/* FOOTER */}
-      <footer className="py-10 text-center text-xs text-zinc-400">
+      <footer className="py-10 text-center text-xs text-gray-500 border-t border-blue-600/20">
         © {new Date().getFullYear()} MedTwin. For demo purposes only.
       </footer>
     </div>
