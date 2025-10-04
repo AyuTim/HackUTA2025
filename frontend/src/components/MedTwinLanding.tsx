@@ -13,6 +13,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useEffect } from "react";
+import AuthButton from "./AuthButton";
 
 const Section = ({
   id,
@@ -38,6 +41,19 @@ const Glow = ({ className = "" }: { className?: string }) => (
 
 export default function MedTwinLanding() {
   const router = useRouter();
+  const { user, isLoading } = useUser();
+  
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading your MedTwin...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -65,9 +81,7 @@ export default function MedTwinLanding() {
               Get started
             </a>
           </div>
-          <button className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse">
-            Launch App
-          </button>
+          <AuthButton />
         </Section>
       </nav>
 
