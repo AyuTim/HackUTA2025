@@ -338,26 +338,42 @@ export default function ProfileView() {
           )}
         </Panel>
 
-        {/* Medications */}
-        <Panel
-          title="Medications"
-          icon={<Pill size={16} />}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {medications.map((med, i) => (
-              <InfoCard
-                key={i}
-                title={med.title}
-                description={med.description}
-                color="blue"
-                opacity={0.85}
-              />
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-4 text-center">
-            Note: This is sample data. Connect to your medical records to see actual medications.
-          </p>
-        </Panel>
+         {/* Medications */}
+         <Panel
+           title="Medications"
+           icon={<Pill size={16} />}
+         >
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+             {medications.map((med, i) => (
+               <InfoCard
+                 key={i}
+                 title={med.title}
+                 description={med.description}
+                 color="blue"
+                 opacity={0.85}
+               />
+             ))}
+           </div>
+           <p className="text-xs text-gray-500 mt-4 text-center">
+             Note: This is sample data. Connect to your medical records to see actual medications.
+           </p>
+           
+           {/* Request Refill Button */}
+           <div className="mt-6 flex justify-center">
+             <motion.button
+               onClick={() => {
+                 // TODO: Implement refill request logic
+                 alert('Refill request feature coming soon!');
+               }}
+               className="rounded-xl bg-gradient-to-r from-blue-900 to-purple-900 hover:from-blue-800 hover:to-purple-800 border border-blue-900/50 px-6 py-3 text-sm font-semibold flex items-center gap-2 shadow-lg"
+               whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
+               whileTap={{ scale: 0.95 }}
+             >
+               <Pill size={18} />
+               Request Refill
+             </motion.button>
+           </div>
+         </Panel>
 
         {/* Current Ailments */}
         <Panel

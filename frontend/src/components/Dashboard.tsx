@@ -15,6 +15,8 @@ import {
   Moon,
   GlassWater,
   User,
+  Flame,
+  Award,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -192,6 +194,12 @@ export default function MedTwinDashboard() {
             >
               Open What-If
             </motion.button>
+
+            {/* Streak Indicator */}
+            <div className="flex items-center gap-1.5 ml-4">
+              <Flame size={18} className="text-orange-400" />
+              <span className="text-lg font-bold text-orange-400">7</span>
+            </div>
           </div>
         </div>
       </header>
@@ -206,7 +214,7 @@ export default function MedTwinDashboard() {
               <span className="font-semibold text-blue-400">{waterCount}</span> / 8 glasses today
             </div>
 
-            <div className="grid grid-cols-4 gap-3 justify-items-center mb-3">
+            <div className="grid grid-cols-4 gap-2 justify-items-center mb-3">
               {Array.from({ length: 8 }).map((_, i) => {
                 const isFilled = filledCups[i];
                 return (
@@ -220,23 +228,49 @@ export default function MedTwinDashboard() {
                         return updated;
                       })
                     }
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className="relative h-12 w-8 rounded-md flex items-center justify-center"
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.85 }}
+                    className="relative"
                   >
-                    <motion.div
-                      animate={isFilled ? {
-                        boxShadow: ["0 0 10px rgba(59, 130, 246, 0.3)", "0 0 20px rgba(59, 130, 246, 0.5)", "0 0 10px rgba(59, 130, 246, 0.3)"]
-                      } : {}}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    >
-                      <GlassWater
-                        size={26}
-                        className={`relative z-20 transition-colors duration-300 ${
-                          isFilled ? "text-blue-400" : "text-gray-600"
-                        }`}
+                    <svg width="32" height="40" viewBox="0 0 32 40" className="overflow-visible">
+                      <defs>
+                        <clipPath id={`glassClip-${i}`}>
+                          {/* Glass shape - trapezoid */}
+                          <path d="M 8 2 L 24 2 L 26 38 L 6 38 Z" />
+                        </clipPath>
+                      </defs>
+                      
+                      {/* Water fill with clip path */}
+                      <g clipPath={`url(#glassClip-${i})`}>
+                        <motion.rect
+                          x="0"
+                          y="0"
+                          width="32"
+                          height="40"
+                          fill="url(#waterGradient)"
+                          initial={{ y: 40 }}
+                          animate={{ y: isFilled ? 8 : 40 }}
+                          transition={{ duration: 0.4, ease: "easeOut" }}
+                        />
+                      </g>
+                      
+                      {/* Glass outline */}
+                      <path 
+                        d="M 8 2 L 24 2 L 26 38 L 6 38 Z" 
+                        fill="none" 
+                        stroke={isFilled ? "white" : "#4b5563"} 
+                        strokeWidth="2"
+                        className="transition-colors duration-300"
                       />
-                    </motion.div>
+                      
+                      {/* Water gradient definition */}
+                      <defs>
+                        <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#60a5fa" />
+                          <stop offset="100%" stopColor="#3b82f6" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
                   </motion.button>
                 );
               })}
@@ -363,10 +397,10 @@ export default function MedTwinDashboard() {
 
         {/* CENTER COLUMN */}
         <div className="col-span-12 md:col-span-6 flex flex-col gap-5 items-center">
-          <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full">
-            <div className="aspect-[3/4] rounded-xl bg-gradient-to-br from-blue-900/20 to-red-900/20 grid place-items-center text-gray-400 text-xs border border-blue-900/30 relative overflow-hidden">
+          <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full bg-transparent border-blue-900/20">
+            <div className="aspect-[3/4] rounded-xl bg-gradient-to-br from-blue-900/10 to-red-900/10 grid place-items-center text-gray-400 text-xs border border-blue-900/20 relative overflow-hidden">
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-blue-900/10 via-red-900/10 to-blue-900/10"
+                className="absolute inset-0 bg-gradient-to-r from-blue-900/5 via-red-900/5 to-blue-900/5"
                 animate={{
                   backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
                 }}
@@ -395,9 +429,9 @@ export default function MedTwinDashboard() {
                 className="flex-1 rounded-lg bg-black/50 border border-blue-900/30 px-3 py-2 text-sm placeholder:text-gray-500 text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
               />
               <motion.button 
-                className="rounded-lg bg-gradient-to-r from-blue-900 to-red-900 px-3 py-2 text-sm font-semibold"
-                whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
-                whileTap={{ scale: 0.95 }}
+                className="rounded-lg bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/30 px-3 py-2 text-sm font-semibold"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 Send
               </motion.button>
@@ -405,6 +439,27 @@ export default function MedTwinDashboard() {
           </Panel>
 
           <Panel title="Monthly Check-ins" icon={<CalendarCheck2 size={16} />}>
+            {/* Streak and Points - Compact */}
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <motion.div 
+                className="flex items-center justify-center gap-1 bg-gradient-to-br from-orange-900/20 to-red-900/20 border border-orange-900/30 rounded-md px-2 py-1"
+                whileHover={{ scale: 1.02 }}
+              >
+                <Flame size={12} className="text-orange-400" />
+                <div className="text-xs font-bold text-orange-400">7</div>
+                <div className="text-[9px] text-gray-400">streak</div>
+              </motion.div>
+              
+              <motion.div 
+                className="flex items-center justify-center gap-1 bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-900/30 rounded-md px-2 py-1"
+                whileHover={{ scale: 1.02 }}
+              >
+                <Award size={12} className="text-blue-400" />
+                <div className="text-xs font-bold text-blue-400">350</div>
+                <div className="text-[9px] text-gray-400">pts</div>
+              </motion.div>
+            </div>
+            
             <div className="flex items-center justify-between mb-2 text-sm">
               <div>
                 <span className="font-semibold">{checkedCount}</span> / {DAYS_IN_MONTH} days checked in
@@ -444,6 +499,20 @@ export default function MedTwinDashboard() {
                 transition={{ duration: 1, ease: "easeOut" }}
               />
             </div>
+            
+            {/* Request Refill Button */}
+            <motion.button
+              onClick={() => {
+                // TODO: Implement refill request logic
+                alert('Refill request sent! Your pharmacy will be notified.');
+              }}
+              className="w-full mt-4 rounded-xl bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/30 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Pill size={16} />
+              Request Refill
+            </motion.button>
           </Panel>
 
           <Panel title="AI Recommendations" icon={<BellRing size={16} />}>
