@@ -2,7 +2,7 @@
 
 import React, { Suspense, useRef, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment, Html, useProgress, useGLTF } from "@react-three/drei";
+import { OrbitControls, Environment, Html, useGLTF } from "@react-three/drei";
 
 function Model({ src }: { src: string }) {
   const gltf = useGLTF(src);
@@ -39,10 +39,9 @@ function Model({ src }: { src: string }) {
 }
 
 function Loader() {
-  const { progress } = useProgress();
   return (
     <Html center>
-      <div className="text-sm text-gray-300">Loading avatar {Math.round(progress)}%</div>
+      <div className="text-sm text-gray-300">Loading avatar...</div>
     </Html>
   );
 }
@@ -60,7 +59,7 @@ export default function AvatarViewer({ src = "/model/soumika.glb" }: { src?: str
     }
   }, []);
 
-  return (
+ return (
     <div className="w-full h-full rounded-2xl overflow-hidden">
       <Canvas camera={{ position: [0, 1.0, 3.2], fov: 45 }}>
         {/* Match AvatarDashBoard lighting/contrast */}
