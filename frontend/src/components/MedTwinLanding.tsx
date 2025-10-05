@@ -16,6 +16,11 @@ import { useRouter } from "next/navigation";
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useEffect } from "react";
 import AuthButton from "./AuthButton";
+import dynamic from "next/dynamic";
+
+// Dynamically import the 3D viewer to avoid SSR issues. The actual package
+// dependencies are optional and instructions are provided in the new component.
+const AvatarViewer = dynamic(() => import("./AvatarViewer"), { ssr: false });
 
 const Section = ({
   id,
@@ -137,14 +142,11 @@ export default function MedTwinLanding() {
             </div>
           </div>
 
-          {/* 3D Canvas Placeholder */}
+          {/* 3D Avatar Viewer */}
           <div className="relative spider-float">
             <div className="rounded-3xl border border-blue-600/30 bg-gradient-to-br from-gray-900 to-black p-3 shadow-2xl shadow-blue-600/20">
-              <div className="aspect-[4/5] rounded-2xl bg-gradient-to-br from-blue-600/10 to-red-600/10 grid place-items-center text-gray-300 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-red-600/5" />
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-pulse" />
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-500/5 to-transparent animate-pulse" />
-                <span className="text-sm relative z-10 spider-text-glow">Three.js 3D Avatar Canvas</span>
+              <div className="aspect-[4/5] rounded-2xl bg-gradient-to-br from-blue-600/10 to-red-600/10 relative overflow-hidden">
+                <AvatarViewer />
               </div>
             </div>
             <div className="absolute -inset-6 -z-10 bg-gradient-to-r from-blue-600/20 via-red-600/10 to-blue-600/20 blur-3xl rounded-[2rem] spider-glow" />
