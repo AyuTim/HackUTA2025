@@ -1,37 +1,110 @@
-# --- Node / Next.js ---
+# =========================
+# Node / Next.js
+# =========================
 node_modules/
 .next/
 .next/cache/
 out/
 .turbo/
 .vercel/
+.eslintcache
+.npmrc.local
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package managers — keep lockfiles for reproducible builds
+# (Do NOT ignore: package-lock.json / pnpm-lock.yaml / yarn.lock)
+# !package-lock.json
+# !pnpm-lock.yaml
+# !yarn.lock
+
+# TypeScript build info
 *.tsbuildinfo
+
+# Env files (keep an example)
 .env
 .env.*
+.docenv
 !.env.example
+# Next convention
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# --- Python / backend ---
+# =========================
+# Python / FastAPI
+# =========================
+# Virtual envs
+venv/
+.venv/
+env/
 backend/venv/
+
+# Byte-compiled / caches
 **/__pycache__/
-**/*.pyc
-**/*.pyo
-**/*.pyd
-*.pytest_cache/
+**/*.py[cod]
+*.so
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+.tox/
 .coverage
+.coverage.*
 htmlcov/
-dist/
+.cache/  # pytest/pytest-cov sometimes
+
+# Packaging / build
 build/
+dist/
 .eggs/
 *.egg-info/
 
-# OS / IDE
+# Jupyter & misc
+.ipynb_checkpoints/
+.python-version
+
+# =========================
+# Supabase (keep config & migrations)
+# =========================
+# Local Supabase temp & artifacts
+supabase/.temp/
+supabase/.branches/
+supabase/.diff
+# Generated client types (re-generate in CI if desired)
+supabase/generated/
+# Local storage mirrors / uploads (if you sync them locally)
+supabase/storage/
+storage/
+uploads/
+backend/uploads/
+backend/tmp/
+
+# =========================
+# OS / Editors
+# =========================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 .idea/
+*.swp
+*.swo
+.history/

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AuthButton from "./AuthButton";
 import dynamic from "next/dynamic";
 
@@ -40,7 +40,7 @@ const Section = ({
 const Glow = ({ className = "" }: { className?: string }) => (
   <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_40%,black,transparent)]">
     <div
-      className={`absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-600/15 via-red-600/10 to-blue-600/15 blur-3xl ${className}`}
+      className={`absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-900/20 via-red-900/15 to-blue-900/20 blur-3xl ${className}`}
     />
   </div>
 );
@@ -48,6 +48,34 @@ const Glow = ({ className = "" }: { className?: string }) => (
 export default function MedTwinLanding() {
   const router = useRouter();
   const { user, isLoading } = useUser();
+  const [hasProfile, setHasProfile] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  
+  // Check if user has a profile
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (!user) {
+        setCheckingProfile(false);
+        setHasProfile(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const result = await response.json();
+          setHasProfile(result.data !== null && result.data !== undefined);
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        setHasProfile(false);
+      } finally {
+        setCheckingProfile(false);
+      }
+    };
+
+    checkProfile();
+  }, [user]);
   
   // Show loading while checking auth
   if (isLoading) {
@@ -55,7 +83,7 @@ export default function MedTwinLanding() {
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading your MedTwin...</p>
+          <p className="text-gray-300">Loading Nomi.ai...</p>
         </div>
       </div>
     );
@@ -65,13 +93,13 @@ export default function MedTwinLanding() {
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       <Glow />
       {/* NAV */}
-      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/50 bg-black/30 border-b border-red-500/20">
+      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/50 bg-black/30 border-b border-blue-900/30">
         <Section className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-red-600 grid place-items-center shadow-lg shadow-blue-600/30 spider-pulse">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-red-900 grid place-items-center shadow-lg shadow-blue-900/40 spider-pulse">
               <Sparkles size={16} className="text-white spider-glow" />
             </div>
-            <span className="font-bold tracking-wide text-lg spider-text-glow">MedTwin</span>
+            <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">Nomi.ai</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
             <a href="#features" className="hover:text-blue-400 transition-colors duration-300 neon-flicker">
@@ -92,8 +120,8 @@ export default function MedTwinLanding() {
       </nav>
 
       {/* HERO */}
-      <Section className="relative py-20 md:py-28">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+      <Section className="relative py-12 md:py-2">
+        <div className="grid md:grid-cols-2 gap-27 items-start md:items-center">
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
@@ -101,11 +129,85 @@ export default function MedTwinLanding() {
               transition={{ duration: 0.6 }}
               className="text-4xl md:text-6xl font-bold leading-tight"
             >
-              Your{" "}
-              <span className="spider-gradient-text">
-                digital twin
-              </span>{" "}
-              for personal health.
+              <motion.span
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Your{" "}
+              </motion.span>
+              <motion.span 
+                className="relative inline-block"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <span className="relative z-10 font-extrabold">
+                  <motion.span
+                    className="bg-gradient-to-r from-blue-900 via-purple-800 to-red-900 bg-clip-text text-transparent"
+                    style={{ backgroundSize: "200% 100%" }}
+                    animate={{
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    digital twin
+                  </motion.span>
+                </span>
+                {/* Animated glow layer 1 */}
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-red-900 to-blue-900 blur-2xl"
+                  animate={{
+                    opacity: [0.4, 0.5, 0.4],
+                    scale: [0.98, 1.05, 0.98],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+                {/* Animated glow layer 2 - offset timing */}
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-red-900 to-blue-900 blur-xl"
+                  animate={{
+                    opacity: [0.1, 0.3, 0.1],
+                    scale: [1.05, 0.98, 1.05],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1.5
+                  }}
+                />
+              </motion.span>{" "}
+              <motion.span
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="relative inline-block"
+              >
+                <span className="bg-gradient-to-r from-gray-100 via-blue-00 to-gray-100 bg-clip-text text-transparent">
+                  for personal health.
+                </span>
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/20 to-transparent"
+                  animate={{
+                    x: ["-100%", "100%"],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear",
+                    repeatDelay: 1
+                  }}
+                />
+              </motion.span>
             </motion.h1>
             <p className="mt-4 text-gray-300 max-w-xl">
               Upload scans and checkups, visualize a 3D body, simulate what-if
@@ -113,16 +215,37 @@ export default function MedTwinLanding() {
               clarity, privacy, and control.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href="#preview"
-                className="group inline-flex items-center gap-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 px-5 py-3 border border-blue-600/30 hover:border-blue-600/50 transition-all duration-300 web-sway"
+              <button
+                onClick={() => {
+                  if (user && hasProfile) {
+                    router.push('/dashboard');
+                  } else {
+                    router.push('/profile');
+                  }
+                }}
+                disabled={checkingProfile}
+                className="group inline-flex items-center gap-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 px-5 py-3 border border-blue-600/30 hover:border-blue-600/50 transition-all duration-300 web-sway disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                See the demo{" "}
-                <ChevronRight
-                  className="group-hover:translate-x-0.5 transition"
-                  size={16}
-                />
-              </a>
+                {checkingProfile ? (
+                  'Loading...'
+                ) : user && hasProfile ? (
+                  <>
+                    Dashboard{" "}
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition"
+                      size={16}
+                    />
+                  </>
+                ) : (
+                  <>
+                    Create Digital Twin{" "}
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition"
+                      size={16}
+                    />
+                  </>
+                )}
+              </button>
               <a
                 href="#cta"
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-5 py-3 font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse"
@@ -203,8 +326,18 @@ export default function MedTwinLanding() {
                 <li>Private-by-default, on your device</li>
               </ul>
               <div className="pt-2 flex gap-3">
-                <button className="rounded-xl bg-blue-600/10 px-4 py-2 border border-blue-600/30 hover:bg-blue-600/20 transition-all duration-300 web-sway">
-                  Open Dashboard
+                <button 
+                  onClick={() => {
+                    if (user && hasProfile) {
+                      router.push('/dashboard');
+                    } else {
+                      router.push('/profile');
+                    }
+                  }}
+                  disabled={checkingProfile}
+                  className="rounded-xl bg-blue-600/10 px-4 py-2 border border-blue-600/30 hover:bg-blue-600/20 transition-all duration-300 web-sway disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {checkingProfile ? 'Loading...' : user && hasProfile ? 'Open Dashboard' : 'Create Digital Twin'}
                 </button>
                 <button className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse">
                   Try What-If
@@ -212,16 +345,12 @@ export default function MedTwinLanding() {
               </div>
             </div>
             <div className="rounded-2xl border border-red-600/30 bg-black/60 p-4">
-              <div className="aspect-video rounded-xl bg-gradient-to-br from-blue-600/10 to-red-600/10 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-60 [mask-image:radial-gradient(50%_70%_at_50%_50%,white,transparent)]">
-                  <div className="absolute -inset-24 bg-[conic-gradient(from_120deg,rgba(59,130,246,0.25),rgba(220,38,38,0.15),rgba(59,130,246,0.2))] blur-2xl" />
-                </div>
-                <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-blue-500 rounded-full animate-spin mx-auto mb-2"></div>
-                    <p>Embed your dashboard preview here</p>
-                  </div>
-                </div>
+              <div className="aspect-video rounded-xl relative overflow-hidden flex items-center justify-center">
+                <img
+                  src="/dashboard-preview.png"
+                  alt="Dashboard Preview"
+                  className="rounded-lg max-h-full max-w-full object-contain"
+                />
               </div>
             </div>
           </div>
@@ -299,7 +428,7 @@ export default function MedTwinLanding() {
 
       {/* FOOTER */}
       <footer className="py-10 text-center text-xs text-gray-500 border-t border-blue-600/20">
-        © {new Date().getFullYear()} MedTwin. For demo purposes only.
+        © {new Date().getFullYear()} Nomi.ai. For demo purposes only.
       </footer>
     </div>
   );

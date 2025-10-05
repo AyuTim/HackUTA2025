@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
   User,
@@ -9,6 +9,8 @@ import {
   Ruler,
   FileText,
   Sparkles,
+  Activity,
+  Droplet,
   Loader2,
   Eye,
   EyeOff,
@@ -17,14 +19,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import AuthButton from "./AuthButton";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
-// ---------- Safe Supabase init (no crash if env missing) ----------
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseAnon ? createClient(supabaseUrl, supabaseAnon) : null;
-
+/* ================================
+   Body-part mapping
+================================== */
 type BodyCat =
   | "head"
   | "hair"
@@ -35,14 +34,11 @@ type BodyCat =
   | "unknown";
 
 const PART_MAP: Record<string, Exclude<BodyCat, "unknown">> = {
-  // head & hair
   brain: "head",
   neuro: "head",
   head: "head",
   scalp: "hair",
   hair: "hair",
-
-  // stomach (abdomen/viscera)
   stomach: "stomach",
   abdomen: "stomach",
   abdominal: "stomach",
@@ -57,24 +53,18 @@ const PART_MAP: Record<string, Exclude<BodyCat, "unknown">> = {
   bowel: "stomach",
   bladder: "stomach",
   gastro: "stomach",
-
-  // legs
   leg: "legs",
   legs: "legs",
   knee: "legs",
   thigh: "legs",
   femur: "legs",
   tibia: "legs",
-
-  // feet
   foot: "feet",
   feet: "feet",
   ankle: "feet",
   toe: "feet",
   toes: "feet",
   calcaneus: "feet",
-
-  // arms
   arm: "arms",
   arms: "arms",
   shoulder: "arms",
@@ -94,10 +84,6 @@ function toBodyCategory(raw?: string | null): BodyCat {
   return "unknown";
 }
 
-/** Given the Gemini Analyze response JSON, return a CSV of categories.
- *  Looks at data.findings[].bodyPart / .region, dedupes categories.
- *  If none found, returns "unknown".
- */
 function extractBodyPartCategoriesFromAnalyze(json: any): string {
   const data = json?.data ?? json;
   const findings = Array.isArray(data?.findings) ? data.findings : [];
@@ -107,22 +93,25 @@ function extractBodyPartCategoriesFromAnalyze(json: any): string {
     cats.add(toBodyCategory(src));
   }
   if (cats.size === 0) return "unknown";
-  return Array.from(cats).join(","); // e.g. "head,stomach"
+  return Array.from(cats).join(",");
 }
+
+/* ================================
+   Types
+================================== */
+type AnalysisItem = {
+  file: string;
+  result?: any;
+  error?: string;
+};
 
 /* ================================
    Component
 ================================== */
-
-type AnalysisItem = {
-  file: string;
-  result?: any; // { mode, data } or { mode, transcript }
-  error?: string;
-};
-
 export default function ProfileCreation() {
-  // === original fields (unchanged) ===
-  const [fileName, setFileName] = useState<string>(""); // single filename you POST as medicalRecordFile
+  // profile fields
+  const [fileName, setFileName] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fullName, setFullName] = useState<string>("");
   const [age, setAge] = useState<string>("");
   const [heightFeet, setHeightFeet] = useState<string>("");
@@ -130,13 +119,15 @@ export default function ProfileCreation() {
   const [weight, setWeight] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [bloodType, setBloodType] = useState<string>("");
+
+  // submission + notifications
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitMessage, setSubmitMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  // === new UI state for multi-analyze & display ===
+  // analyze UI state
   const [fileNamesSelected, setFileNamesSelected] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
@@ -145,14 +136,12 @@ export default function ProfileCreation() {
 
   const router = useRouter();
   const { user, isLoading } = useUser();
-
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
-  // === loadProfile (unchanged fields) ===
+  // Load existing profile
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return;
-
       try {
         const response = await fetch("/api/profile");
         if (response.ok) {
@@ -171,11 +160,10 @@ export default function ProfileCreation() {
         console.error("Error loading profile:", error);
       }
     };
-
     loadProfile();
   }, [user]);
 
-  // === multi-file upload + sequential analysis ===
+  // Multi-file upload + sequential analysis
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setAnalyses([]);
@@ -183,10 +171,10 @@ export default function ProfileCreation() {
 
     if (files.length === 0) {
       setFileNamesSelected([]);
+      setSelectedFile(null);
       return;
     }
 
-    // validate PDFs
     const pdfs = files.filter(
       (f) =>
         f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
@@ -203,13 +191,15 @@ export default function ProfileCreation() {
           .join("\n- ")}`
       );
     }
-
     if (pdfs.length === 0) {
       e.target.value = "";
       setFileNamesSelected([]);
+      setSelectedFile(null);
       return;
     }
 
+    // keep the first file for Storage upload on submit
+    setSelectedFile(pdfs[0]);
     setFileNamesSelected(pdfs.map((f) => f.name));
     setIsAnalyzing(true);
 
@@ -217,8 +207,8 @@ export default function ProfileCreation() {
     for (const file of pdfs) {
       try {
         const formData = new FormData();
-        formData.append("pdf", file); // backend expects "pdf"
-        formData.append("mode", "json"); // or "transcript"
+        formData.append("pdf", file);
+        formData.append("mode", "json");
 
         const resp = await fetch(`${API_BASE}/api/pdf/analyze`, {
           method: "POST",
@@ -235,13 +225,11 @@ export default function ProfileCreation() {
           console.log(`Gemini JSON for ${file.name}:`, json);
           results.push({ file: file.name, result: json });
 
-          // --- Build insert payload (ONLY requested columns) ---
-          const extractedPayload = json; // full analyze response
+          // Insert row into Supabase (documents)
+          const extractedPayload = json;
           const docType = "Medical Report";
-          const pathGuess = `uploads/${file.name}`; // adjust to your real storage path if you use one
-
-          // NEW: body_part derived from JSON
-          const bodyPartCsv = extractBodyPartCategoriesFromAnalyze(json); // e.g. "head" or "head,stomach"
+          const pathGuess = `uploads/${file.name}`;
+          const bodyPartCsv = extractBodyPartCategoriesFromAnalyze(json);
 
           if (supabase) {
             const { error } = await supabase.from("documents").insert([
@@ -249,16 +237,15 @@ export default function ProfileCreation() {
                 file_name: file.name,
                 file_path: pathGuess,
                 document_type: docType,
-                extracted_text: JSON.stringify(extractedPayload), // TEXT column ⇒ stringify
-                body_part: bodyPartCsv, // NEW COLUMN
+                extracted_text: JSON.stringify(extractedPayload),
+                body_part: bodyPartCsv,
               },
             ]);
-
             if (error) {
               console.error("Error saving to Supabase:", error);
               alert(`Database save failed for ${file.name}: ${error.message}`);
             } else {
-              alert(`${file.name} saved to database successfully!`);
+              alert(`✅ ${file.name} saved to database successfully!`);
               setUploadedFiles((prev) =>
                 Array.from(new Set([...prev, file.name]))
               );
@@ -270,7 +257,6 @@ export default function ProfileCreation() {
             );
           }
 
-          // Also set the single fileName to the last successful analysis
           setFileName(file.name);
         }
       } catch (err: any) {
@@ -281,25 +267,54 @@ export default function ProfileCreation() {
         });
       }
 
-      // update UI after each file
       setAnalyses([...results]);
     }
 
     setIsAnalyzing(false);
   };
 
-  // === original handleSubmit (unchanged) ===
+  // Submit profile (optionally upload first-selected PDF to Supabase Storage)
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitMessage(null);
 
     try {
+      let medicalRecordUrl: string | null = null;
+      let medicalRecordFilename: string | null = null;
+
+      if (selectedFile && user && supabase) {
+        const fileExt = selectedFile.name.split(".").pop();
+        const uniqueBase = `${(user as any)?.sub || "anon"}_${Date.now()}`;
+        const filePath = `medical-records/${uniqueBase}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("medical-documents")
+          .upload(filePath, selectedFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error("File upload error:", uploadError);
+          setSubmitMessage({
+            type: "error",
+            text: "Failed to upload medical document. Please try again.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("medical-documents")
+          .getPublicUrl(filePath);
+        medicalRecordUrl = urlData.publicUrl;
+        medicalRecordFilename = selectedFile.name;
+      }
+
       const response = await fetch("/api/profile", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
           age,
@@ -308,7 +323,9 @@ export default function ProfileCreation() {
           weight,
           gender,
           bloodType,
-          medicalRecordFile: fileName, // NOTE: keep EXACTLY as before
+          medicalRecordUrl,
+          medicalRecordFilename,
+          medicalRecordFile: fileName,
         }),
       });
 
@@ -320,7 +337,7 @@ export default function ProfileCreation() {
           text: "Profile saved successfully!",
         });
         setTimeout(() => {
-          router.push("/");
+          router.push("/dashboard");
         }, 2000);
       } else {
         setSubmitMessage({
@@ -339,49 +356,121 @@ export default function ProfileCreation() {
     }
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+    },
+  };
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Glowing background */}
-      <div className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_40%,black,transparent)]">
-        <div className="absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-600/15 via-red-600/10 to-blue-600/15 blur-3xl" />
+      {/* Animated glowing background */}
+      <div className="pointer-events-none absolute inset-0">
+        <motion.div
+          className="absolute inset-x-0 top-0 h-[40rem] bg-gradient-to-br from-blue-900/30 via-purple-900/15 to-red-900/30 blur-3xl"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute inset-x-0 bottom-0 h-[40rem] bg-gradient-to-tr from-red-900/30 via-pink-900/15 to-blue-900/30 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+        />
       </div>
 
       {/* NAV */}
-      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/50 bg-black/30 border-b border-red-500/20">
+      <nav className="sticky top-0 z-50 backdrop-blur-xl supports-[backdrop-filter]:bg-black/60 bg-black/40 border-b border-blue-900/30">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-red-600 grid place-items-center shadow-lg shadow-blue-600/30 spider-pulse">
-              <Sparkles size={16} className="text-white spider-glow" />
-            </div>
-            <span className="font-bold tracking-wide text-lg spider-text-glow">
-              MedTwin
+          <motion.div
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.div
+              className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-red-900 grid place-items-center shadow-lg shadow-blue-900/50"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Sparkles size={16} className="text-white" />
+            </motion.div>
+            <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">
+              Nomi.ai
             </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
+          </motion.div>
+          <motion.div
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.button
               onClick={() => router.push("/")}
-              className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse"
+              className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 hover:from-blue-800 hover:to-red-800 border border-blue-900/50 px-4 py-2 text-sm font-semibold backdrop-blur-sm transition-all duration-300"
+              whileHover={{
+                scale: 1.05,
+                boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)",
+              }}
+              whileTap={{ scale: 0.95 }}
             >
               Home
-            </button>
+            </motion.button>
             <AuthButton />
-          </div>
+          </motion.div>
         </div>
       </nav>
 
       {/* CONTENT */}
-      <div className="max-w-4xl mx-auto py-16 px-6 relative z-10">
+      <div className="max-w-5xl mx-auto py-16 px-6 relative z-10">
         {isLoading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
+          <motion.div
+            className="flex items-center justify-center min-h-[400px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
             <div className="text-center">
-              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <motion.div
+                className="w-16 h-16 border-4 border-blue-500 border-t-red-500 rounded-full mx-auto mb-4"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
               <p className="text-gray-300">Loading...</p>
             </div>
-          </div>
+          </motion.div>
         ) : !user ? (
-          <div className="text-center min-h-[400px] flex items-center justify-center">
+          <motion.div
+            className="text-center min-h-[400px] flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             <div className="max-w-md">
-              <h1 className="text-3xl font-bold mb-4 spider-text-glow">
+              <motion.div
+                className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-900 to-red-900 mx-auto mb-6 grid place-items-center"
+                animate={{
+                  boxShadow: [
+                    "0 0 20px rgba(30, 58, 138, 0.5)",
+                    "0 0 40px rgba(127, 29, 29, 0.5)",
+                    "0 0 20px rgba(30, 58, 138, 0.5)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <User size={32} className="text-white" />
+              </motion.div>
+              <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-red-400 bg-clip-text text-transparent">
                 Authentication Required
               </h1>
               <p className="text-gray-300 mb-6">
@@ -390,144 +479,221 @@ export default function ProfileCreation() {
               </p>
               <AuthButton />
             </div>
-          </div>
+          </motion.div>
         ) : (
           <>
             <motion.h1
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-4xl font-bold text-center mb-10"
+              className="text-5xl font-bold text-center mb-12"
             >
               Create Your{" "}
-              <span className="spider-gradient-text">Medical Profile</span>
+              <motion.span
+                className="bg-gradient-to-r from-blue-400 via-purple-400 to-red-400 bg-clip-text text-transparent"
+                animate={{ backgroundPosition: ["0%", "100%", "0%"] }}
+                transition={{ duration: 5, repeat: Infinity }}
+              >
+                Medical Profile
+              </motion.span>
             </motion.h1>
 
             <motion.form
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
               onSubmit={handleSubmit}
-              className="space-y-6 rounded-3xl bg-gradient-to-b from-gray-900 to-black border border-blue-600/30 p-8 shadow-2xl shadow-blue-600/20 spider-float"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="space-y-8 rounded-3xl bg-gradient-to-b from-gray-900/80 to-black/80 backdrop-blur-xl border border-blue-900/30 p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden"
             >
-              {/* Submit message */}
-              {submitMessage && (
-                <div
-                  className={`p-4 rounded-xl border ${
-                    submitMessage.type === "success"
-                      ? "bg-green-900/30 border-green-500/50 text-green-300"
-                      : "bg-red-900/30 border-red-500/50 text-red-300"
-                  }`}
-                >
-                  {submitMessage.text}
-                </div>
-              )}
+              {/* 🔧 Fix: this overlay now ignores pointer events so inputs remain clickable/typable */}
+              <motion.div
+                className="absolute inset-0 rounded-3xl pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(30, 58, 138, 0.15), rgba(127, 29, 29, 0.15), rgba(30, 58, 138, 0.15))",
+                  backgroundSize: "200% 100%",
+                }}
+                animate={{ backgroundPosition: ["0% 0%", "100% 0%", "0% 0%"] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              />
+
+              <AnimatePresence>
+                {submitMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                    className={`p-5 rounded-2xl border backdrop-blur-sm ${
+                      submitMessage.type === "success"
+                        ? "bg-emerald-900/30 border-emerald-500/50 text-emerald-300 shadow-lg shadow-emerald-500/20"
+                        : "bg-red-900/30 border-red-500/50 text-red-300 shadow-lg shadow-red-500/20"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <motion.div
+                        animate={{
+                          rotate:
+                            submitMessage.type === "success" ? [0, 360] : 0,
+                        }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        {submitMessage.type === "success" ? "✓" : "✗"}
+                      </motion.div>
+                      {submitMessage.text}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Input fields */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <FormInput
+              <motion.div
+                variants={itemVariants}
+                className="grid md:grid-cols-2 gap-6"
+              >
+                <EnhancedFormInput
                   label="Full Name"
-                  placeholder="Peter Parker"
-                  icon={<User />}
+                  placeholder="Enter your name"
+                  icon={<User className="text-blue-400" />}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
                 />
-                <FormInput
+                <EnhancedFormInput
                   label="Age"
                   type="number"
-                  placeholder="18"
-                  icon={<HeartPulse />}
+                  placeholder="Enter your age"
+                  icon={<Activity className="text-red-400" />}
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                   required
                 />
+              </motion.div>
 
-                {/* Height in ft/in */}
+              {/* Height and Weight */}
+              <motion.div
+                variants={itemVariants}
+                className="grid md:grid-cols-2 gap-6"
+              >
                 <div>
-                  <label className="block text-sm mb-2 text-gray-400">
+                  <label className="block text-sm mb-3 text-gray-300 font-medium flex items-center gap-2">
+                    <Ruler className="text-blue-400" size={16} />
                     Height
                   </label>
                   <div className="flex items-center gap-3">
-                    <input
+                    <motion.input
                       type="number"
                       placeholder="5"
                       value={heightFeet}
                       onChange={(e) => setHeightFeet(e.target.value)}
-                      className="w-1/2 bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white placeholder-gray-500 transition-all duration-300"
+                      className="w-1/2 bg-black/50 border border-blue-900/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-900 focus:border-blue-900/50 focus:outline-none text-white placeholder-gray-500 transition-all duration-300 hover:border-blue-900/50"
+                      whileFocus={{ scale: 1.02 }}
                     />
-                    <span className="text-gray-400">ft</span>
-                    <input
+                    <span className="text-gray-400 font-medium">ft</span>
+                    <motion.input
                       type="number"
                       placeholder="10"
                       value={heightInches}
                       onChange={(e) => setHeightInches(e.target.value)}
-                      className="w-1/2 bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white placeholder-gray-500 transition-all duration-300"
+                      className="w-1/2 bg-black/50 border border-blue-900/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-900 focus:border-blue-900/50 focus:outline-none text-white placeholder-gray-500 transition-all duration-300 hover:border-blue-900/50"
+                      whileFocus={{ scale: 1.02 }}
                     />
-                    <span className="text-gray-400">in</span>
+                    <span className="text-gray-400 font-medium">in</span>
                   </div>
                 </div>
 
-                {/* Weight in lbs */}
-                <FormInput
+                <EnhancedFormInput
                   label="Weight (lbs)"
                   type="number"
-                  placeholder="150"
-                  icon={<Ruler />}
+                  placeholder="Enter weight"
+                  icon={<HeartPulse className="text-red-400" />}
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
                 />
-              </div>
+              </motion.div>
 
               {/* Gender and Blood Type */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <motion.div
+                variants={itemVariants}
+                className="grid md:grid-cols-2 gap-6"
+              >
                 <div>
-                  <label className="block text-sm mb-2 text-gray-400">
+                  <label className="block text-sm mb-3 text-gray-300 font-medium flex items-center gap-2">
+                    <User className="text-purple-400" size={16} />
                     Gender
                   </label>
-                  <select
+                  <motion.select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
-                    className="w-full bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white transition-all duration-300"
+                    className="w-full bg-black/50 border border-blue-900/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-900 focus:border-blue-900/50 focus:outline-none text-white transition-all duration-300 hover:border-blue-900/50 cursor-pointer"
+                    whileFocus={{ scale: 1.02 }}
                   >
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    <option value="" className="bg-gray-900">
+                      Select Gender
+                    </option>
+                    <option value="Male" className="bg-gray-900">
+                      Male
+                    </option>
+                    <option value="Female" className="bg-gray-900">
+                      Female
+                    </option>
+                    <option value="Other" className="bg-gray-900">
+                      Other
+                    </option>
+                  </motion.select>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2 text-gray-400">
+                  <label className="block text-sm mb-3 text-gray-300 font-medium flex items-center gap-2">
+                    <Droplet className="text-red-400" size={16} />
                     Blood Type
                   </label>
-                  <select
+                  <motion.select
                     value={bloodType}
                     onChange={(e) => setBloodType(e.target.value)}
-                    className="w-full bg-black/50 border border-red-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500/50 focus:outline-none text-white transition-all duration-300"
+                    className="w-full bg-black/50 border border-red-900/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-900 focus:border-red-900/50 focus:outline-none text-white transition-all duration-300 hover:border-red-900/50 cursor-pointer"
+                    whileFocus={{ scale: 1.02 }}
                   >
-                    <option value="">Select</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                  </select>
+                    <option value="" className="bg-gray-900">
+                      Select Blood Type
+                    </option>
+                    <option value="A+" className="bg-gray-900">
+                      A+
+                    </option>
+                    <option value="A-" className="bg-gray-900">
+                      A-
+                    </option>
+                    <option value="B+" className="bg-gray-900">
+                      B+
+                    </option>
+                    <option value="B-" className="bg-gray-900">
+                      B-
+                    </option>
+                    <option value="AB+" className="bg-gray-900">
+                      AB+
+                    </option>
+                    <option value="AB-" className="bg-gray-900">
+                      AB-
+                    </option>
+                    <option value="O+" className="bg-gray-900">
+                      O+
+                    </option>
+                    <option value="O-" className="bg-gray-900">
+                      O-
+                    </option>
+                  </motion.select>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* PDF Upload (multi) */}
-              <div className="pt-4 space-y-4">
+              {/* PDF Upload (multi) + controls */}
+              <motion.div variants={itemVariants} className="pt-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="block text-sm mb-2 text-gray-400">
+                  <label className="block text-sm mb-3 text-gray-300 font-medium flex items-center gap-2">
+                    <FileText className="text-blue-400" size={16} />
                     Upload Medical Records (PDF only)
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowJson((s) => !s)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-blue-600/30 bg-black/40 px-3 py-1.5 text-xs text-gray-200 hover:bg-black/60 transition"
+                    className="inline-flex items-center gap-2 rounded-lg border border-blue-900/40 bg-black/40 px-3 py-1.5 text-xs text-gray-200 hover:bg-black/60 transition"
                   >
                     {showJson ? (
                       <EyeOff className="h-4 w-4" />
@@ -538,21 +704,44 @@ export default function ProfileCreation() {
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 bg-black/50 border border-dashed border-blue-600/30 hover:border-red-600/40 rounded-xl px-4 py-6 transition-all duration-300 web-sway">
-                  <div className="flex items-center gap-3">
-                    <FileText className="text-blue-400 spider-glow" />
+                <motion.div
+                  className="flex items-center justify-between gap-4 bg-black/50 border border-dashed border-blue-900/40 hover:border-red-900/50 rounded-2xl px-6 py-8 transition-all duration-300 group relative overflow-hidden"
+                  whileHover={{
+                    scale: 1.01,
+                    borderColor: "rgba(127, 29, 29, 0.5)",
+                  }}
+                >
+                  <motion.div className="absolute inset-0 bg-gradient-to-r from-blue-900/10 to-red-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="flex items-center gap-4 relative z-10">
+                    <motion.div
+                      className="p-3 rounded-xl bg-gradient-to-br from-blue-900/30 to-red-900/30"
+                      whileHover={{ rotate: 5 }}
+                    >
+                      <FileText className="text-blue-400" size={24} />
+                    </motion.div>
                     <div className="text-sm">
                       {fileNamesSelected.length > 0 ? (
-                        <span className="text-green-400">
-                          {fileNamesSelected.length} file
+                        <motion.span
+                          className="text-emerald-400 font-medium"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                        >
+                          ✓ {fileNamesSelected.length} file
                           {fileNamesSelected.length > 1 ? "s" : ""} selected
-                        </span>
+                        </motion.span>
                       ) : (
                         <span className="text-gray-400">No files selected</span>
                       )}
                     </div>
                   </div>
-                  <label className="relative cursor-pointer bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse">
+                  <motion.label
+                    className="relative cursor-pointer bg-gradient-to-r from-blue-900 to-red-900 px-6 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-blue-900/50 transition-all duration-300 z-10"
+                    whileHover={{
+                      scale: 1.05,
+                      boxShadow: "0 0 30px rgba(30, 58, 138, 0.6)",
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
                     <input
                       type="file"
                       accept="application/pdf"
@@ -560,13 +749,13 @@ export default function ProfileCreation() {
                       className="absolute inset-0 opacity-0 cursor-pointer"
                       onChange={handleFileChange}
                     />
-                    <Upload className="inline-block mr-2" size={14} />
+                    <Upload className="inline-block mr-2" size={16} />
                     Upload
-                  </label>
-                </div>
+                  </motion.label>
+                </motion.div>
 
-                {/* Previously Uploaded Files (this session, successful analyses + DB insert) */}
-                <div className="rounded-xl border border-blue-600/20 bg-black/50 p-4">
+                {/* Previously Uploaded Files (this session) */}
+                <div className="rounded-xl border border-blue-900/30 bg-black/50 p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <FolderOpen className="h-4 w-4 text-blue-300" />
                     <h4 className="font-semibold text-sm">
@@ -605,7 +794,7 @@ export default function ProfileCreation() {
                     {analyses.map((a) => (
                       <div
                         key={a.file}
-                        className="rounded-xl border border-blue-600/20 bg-black/50 p-4"
+                        className="rounded-xl border border-blue-900/30 bg-black/50 p-4"
                       >
                         <div className="mb-2 flex items-center justify-between">
                           <h4 className="font-semibold text-sm">{a.file}</h4>
@@ -620,7 +809,7 @@ export default function ProfileCreation() {
                         {a.error ? (
                           <div className="text-red-300 text-sm">{a.error}</div>
                         ) : (
-                          <pre className="text-xs bg-black/40 border border-blue-600/20 rounded-lg p-3 overflow-auto">
+                          <pre className="text-xs bg-black/40 border border-blue-900/30 rounded-lg p-3 overflow-auto">
                             {JSON.stringify(a.result, null, 2)}
                           </pre>
                         )}
@@ -628,43 +817,80 @@ export default function ProfileCreation() {
                     ))}
                   </div>
                 )}
-              </div>
+              </motion.div>
 
               {/* Submit */}
-              <div className="pt-6 text-center">
-                <button
+              <motion.div variants={itemVariants} className="pt-8 text-center">
+                <motion.button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-8 py-3 font-semibold text-white shadow-lg shadow-blue-600/40 hover:shadow-red-600/40 transition-all duration-300 hover:scale-105 spider-pulse disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="relative group px-12 py-4 rounded-2xl bg-gradient-to-r from-blue-900 to-red-900 font-bold text-lg text-white shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                  whileHover={{
+                    scale: isSubmitting ? 1 : 1.05,
+                    boxShadow: "0 0 40px rgba(30, 58, 138, 0.8)",
+                  }}
+                  whileTap={{ scale: isSubmitting ? 1 : 0.95 }}
                 >
-                  {isSubmitting ? "Saving..." : "Save Profile"}
-                </button>
-              </div>
-
-              <div className="pt-4 text-center">
-                <button
-                  type="button"
-                  onClick={() => router.push("/dashboard")}
-                  className="rounded-xl bg-gradient-to-r from-red-600 to-blue-500 px-8 py-3 font-semibold text-white shadow-lg shadow-red-500/30 hover:scale-[1.02] transition"
-                >
-                  Go to Dashboard
-                </button>
-              </div>
+                  <motion.div className="absolute inset-0 bg-gradient-to-r from-red-900 to-blue-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {isSubmitting ? (
+                      <>
+                        <motion.div
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={20} />
+                        Save Profile
+                      </>
+                    )}
+                  </span>
+                </motion.button>
+              </motion.div>
             </motion.form>
           </>
         )}
       </div>
 
       {/* FOOTER */}
-      <footer className="py-10 text-center text-xs text-gray-500 border-t border-blue-600/20">
-        © {new Date().getFullYear()} MedTwin. For demo purposes only.
-      </footer>
+      <motion.footer
+        className="py-12 text-center text-xs text-gray-500 border-t border-blue-900/20 relative z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+      >
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <motion.div
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <Sparkles size={12} className="text-blue-400" />
+          </motion.div>
+          <span>
+            © {new Date().getFullYear()} Nomi.ai. For demo purposes only.
+          </span>
+          <motion.div
+            animate={{ rotate: [360, 0] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          >
+            <Sparkles size={12} className="text-red-400" />
+          </motion.div>
+        </div>
+      </motion.footer>
     </div>
   );
 }
 
-/* Reusable input component */
-const FormInput = ({
+/* Enhanced reusable input component */
+const EnhancedFormInput = ({
   label,
   type = "text",
   placeholder,
@@ -682,10 +908,15 @@ const FormInput = ({
   required?: boolean;
 }) => (
   <div>
-    <label className="block text-sm mb-2 text-gray-400">{label}</label>
-    <div className="flex items-center bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500/50 transition-all duration-300">
-      <span className="text-blue-400 spider-glow mr-2">{icon}</span>
-      <input
+    <label className="block text-sm mb-3 text-gray-300 font-medium flex items-center gap-2">
+      {icon}
+      {label}
+    </label>
+    <motion.div
+      className="flex items-center bg-black/50 border border-blue-900/30 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-blue-900/50 transition-all duration-300 hover:border-blue-900/50 group"
+      whileFocus={{ scale: 1.02 }}
+    >
+      <motion.input
         type={type}
         placeholder={placeholder}
         value={value}
@@ -693,6 +924,6 @@ const FormInput = ({
         required={required}
         className="w-full bg-transparent outline-none text-white placeholder-gray-500"
       />
-    </div>
+    </motion.div>
   </div>
 );
