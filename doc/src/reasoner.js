@@ -146,7 +146,7 @@ function extractJSON(raw) {
   }
 }
 
-// If all preferred models 404, discover what you CAN use and pick best
+// If all preferred models 404, then we can try what we CAN use and then pick the best
 async function tryAnyAvailable(prompt) {
   const list = await client.models.list();
   const names = (list?.data || []).map((m) => m.id);
