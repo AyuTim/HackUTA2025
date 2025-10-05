@@ -17,6 +17,102 @@ import {
 import { useRouter } from "next/navigation";
 import { useUser } from "@auth0/nextjs-auth0/client";
 import AuthButton from "./AuthButton";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+// ---------- Safe Supabase init (no crash if env missing) ----------
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnon ? createClient(supabaseUrl, supabaseAnon) : null;
+
+type BodyCat =
+  | "head"
+  | "hair"
+  | "stomach"
+  | "legs"
+  | "feet"
+  | "arms"
+  | "unknown";
+
+const PART_MAP: Record<string, Exclude<BodyCat, "unknown">> = {
+  // head & hair
+  brain: "head",
+  neuro: "head",
+  head: "head",
+  scalp: "hair",
+  hair: "hair",
+
+  // stomach (abdomen/viscera)
+  stomach: "stomach",
+  abdomen: "stomach",
+  abdominal: "stomach",
+  liver: "stomach",
+  pancreas: "stomach",
+  kidney: "stomach",
+  kidneys: "stomach",
+  renal: "stomach",
+  spleen: "stomach",
+  intestine: "stomach",
+  intestines: "stomach",
+  bowel: "stomach",
+  bladder: "stomach",
+  gastro: "stomach",
+
+  // legs
+  leg: "legs",
+  legs: "legs",
+  knee: "legs",
+  thigh: "legs",
+  femur: "legs",
+  tibia: "legs",
+
+  // feet
+  foot: "feet",
+  feet: "feet",
+  ankle: "feet",
+  toe: "feet",
+  toes: "feet",
+  calcaneus: "feet",
+
+  // arms
+  arm: "arms",
+  arms: "arms",
+  shoulder: "arms",
+  elbow: "arms",
+  wrist: "arms",
+  hand: "arms",
+  humerus: "arms",
+  radius: "arms",
+  ulna: "arms",
+};
+
+function toBodyCategory(raw?: string | null): BodyCat {
+  const t = (raw || "").toLowerCase();
+  for (const key of Object.keys(PART_MAP)) {
+    if (t.includes(key)) return PART_MAP[key];
+  }
+  return "unknown";
+}
+
+/** Given the Gemini Analyze response JSON, return a CSV of categories.
+ *  Looks at data.findings[].bodyPart / .region, dedupes categories.
+ *  If none found, returns "unknown".
+ */
+function extractBodyPartCategoriesFromAnalyze(json: any): string {
+  const data = json?.data ?? json;
+  const findings = Array.isArray(data?.findings) ? data.findings : [];
+  const cats = new Set<string>();
+  for (const f of findings) {
+    const src = f?.bodyPart || f?.region || "";
+    cats.add(toBodyCategory(src));
+  }
+  if (cats.size === 0) return "unknown";
+  return Array.from(cats).join(","); // e.g. "head,stomach"
+}
+
+/* ================================
+   Component
+================================== */
 
 type AnalysisItem = {
   file: string;
@@ -41,8 +137,8 @@ export default function ProfileCreation() {
   } | null>(null);
 
   // === new UI state for multi-analyze & display ===
-  const [fileNamesSelected, setFileNamesSelected] = useState<string[]>([]); // just what’s in the picker
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]); // list after successful analysis
+  const [fileNamesSelected, setFileNamesSelected] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [showJson, setShowJson] = useState<boolean>(false);
@@ -52,7 +148,7 @@ export default function ProfileCreation() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
-  // === original loadProfile (unchanged) ===
+  // === loadProfile (unchanged fields) ===
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return;
@@ -69,7 +165,6 @@ export default function ProfileCreation() {
             setWeight(result.data.weight?.toString() || "");
             setGender(result.data.gender || "");
             setBloodType(result.data.blood_type || "");
-            // NOTE: We are NOT pulling filenames from backend; this list is session-local
           }
         }
       } catch (error) {
@@ -140,10 +235,42 @@ export default function ProfileCreation() {
           console.log(`Gemini JSON for ${file.name}:`, json);
           results.push({ file: file.name, result: json });
 
-          // 🟢 add to “Previously Uploaded Files” list after successful analysis
-          setUploadedFiles((prev) => Array.from(new Set([...prev, file.name])));
+          // --- Build insert payload (ONLY requested columns) ---
+          const extractedPayload = json; // full analyze response
+          const docType = "Medical Report";
+          const pathGuess = `uploads/${file.name}`; // adjust to your real storage path if you use one
 
-          // 🟢 also set the single fileName to the last successful analysis
+          // NEW: body_part derived from JSON
+          const bodyPartCsv = extractBodyPartCategoriesFromAnalyze(json); // e.g. "head" or "head,stomach"
+
+          if (supabase) {
+            const { error } = await supabase.from("documents").insert([
+              {
+                file_name: file.name,
+                file_path: pathGuess,
+                document_type: docType,
+                extracted_text: JSON.stringify(extractedPayload), // TEXT column ⇒ stringify
+                body_part: bodyPartCsv, // NEW COLUMN
+              },
+            ]);
+
+            if (error) {
+              console.error("Error saving to Supabase:", error);
+              alert(`Database save failed for ${file.name}: ${error.message}`);
+            } else {
+              alert(`✅ ${file.name} saved to database successfully!`);
+              setUploadedFiles((prev) =>
+                Array.from(new Set([...prev, file.name]))
+              );
+            }
+          } else {
+            console.warn("Supabase env missing; skipping DB insert.");
+            setUploadedFiles((prev) =>
+              Array.from(new Set([...prev, file.name]))
+            );
+          }
+
+          // Also set the single fileName to the last successful analysis
           setFileName(file.name);
         }
       } catch (err: any) {
@@ -181,7 +308,7 @@ export default function ProfileCreation() {
           weight,
           gender,
           bloodType,
-          medicalRecordFile: fileName, // NOTE: we keep this EXACTLY as before
+          medicalRecordFile: fileName, // NOTE: keep EXACTLY as before
         }),
       });
 
@@ -215,7 +342,7 @@ export default function ProfileCreation() {
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* Glowing background */}
-      <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_40%,black,transparent)]">
+      <div className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_40%,black,transparent)]">
         <div className="absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-600/15 via-red-600/10 to-blue-600/15 blur-3xl" />
       </div>
 
@@ -247,7 +374,7 @@ export default function ProfileCreation() {
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-300">Loading...</p>
             </div>
           </div>
@@ -438,7 +565,7 @@ export default function ProfileCreation() {
                   </label>
                 </div>
 
-                {/* Previously Uploaded Files (this session, successful analyses) */}
+                {/* Previously Uploaded Files (this session, successful analyses + DB insert) */}
                 <div className="rounded-xl border border-blue-600/20 bg-black/50 p-4">
                   <div className="mb-2 flex items-center gap-2">
                     <FolderOpen className="h-4 w-4 text-blue-300" />
