@@ -119,8 +119,8 @@ export default function MedTwinLanding() {
       </nav>
 
       {/* HERO */}
-      <Section className="relative py-20 md:py-28">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+      <Section className="relative py-12 md:py-2">
+        <div className="grid md:grid-cols-2 gap-27 items-start md:items-center">
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
