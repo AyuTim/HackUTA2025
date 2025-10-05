@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useState, useRef, useCallback } from "react";
+import React, { Suspense, useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
@@ -133,10 +133,12 @@ function Model({
   url,
   onPartClick,
   onPartHover,
+  onModelLoaded,
 }: {
   url: string;
   onPartClick: (p: PartName) => void;
   onPartHover: (p: PartName | null, x?: number, y?: number) => void;
+  onModelLoaded: () => void;
 }) {
   const gltf = useGLTF(url) as any;
   const groupRef = useRef<any>(null);
@@ -148,6 +150,11 @@ function Model({
     });
     return list;
   }, [gltf.scene]);
+
+  // Notify parent that model has loaded
+  useEffect(() => {
+    onModelLoaded();
+  }, [onModelLoaded]);
 
   useFrame(() => {
     if (groupRef.current) groupRef.current.rotation.y += 0.0008;
@@ -232,6 +239,8 @@ export default function AvatarDashboard() {
   const [docs, setDocs] = useState<DocRow[] | null>(null);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   // ref to compute coordinates relative to this container
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -279,12 +288,49 @@ export default function AvatarDashboard() {
     }
   }, []);
 
+  // Ensure we're on the client side before rendering Canvas
+  useEffect(() => {
+    // Mark as mounted
+    setIsMounted(true);
+    
+    // Preload the model
+    useGLTF.preload("/model/soumika.glb");
+    
+    // Check if we've already attempted a refresh
+    const hasRefreshed = sessionStorage.getItem('avatarRefreshed');
+    
+    if (!hasRefreshed) {
+      // Set a timeout to check if model loaded
+      const timeoutId = setTimeout(() => {
+        if (!modelLoaded) {
+          console.log('Avatar did not load, refreshing...');
+          // Mark that we've refreshed to prevent infinite loops
+          sessionStorage.setItem('avatarRefreshed', 'true');
+          // Refresh the page
+          window.location.reload();
+        }
+      }, 1000); // Wait 1 second for model to load
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [modelLoaded]);
+
+  // Clear the refresh flag when model successfully loads
+  useEffect(() => {
+    if (modelLoaded) {
+      console.log('Avatar loaded successfully');
+      sessionStorage.removeItem('avatarRefreshed');
+    }
+  }, [modelLoaded]);
+
+  // Don't render Canvas until mounted (prevents SSR issues)
+  if (!isMounted) {
+    return <div ref={wrapperRef} className="w-full h-full relative" />;
+  }
+
   return (
     <div ref={wrapperRef} className="w-full h-full relative">
-      <Canvas
-        camera={{ position: [0, 1.0, 3.2], fov: 45 }}
-        className="rounded-xl"
-      >
+      <Canvas camera={{ position: [0, 0.4, 3.2], fov: 60 }} className="rounded-xl">
         <ambientLight intensity={1.0} />
         <directionalLight intensity={0.9} position={[5, 10, 7]} />
         <hemisphereLight args={["#e8f0ff", "#222222", 0.35]} />
@@ -313,6 +359,7 @@ export default function AvatarDashboard() {
                 setPointerPos(null);
               }
             }}
+            onModelLoaded={() => setModelLoaded(true)}
           />
           <OrbitControls enablePan enableZoom enableRotate />
         </Suspense>
@@ -424,6 +471,6 @@ export default function AvatarDashboard() {
     </div>
   );
 }
-
 // preload the model
 (useGLTF as any).preload?.("/model/soumika.glb");
+

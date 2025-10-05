@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   Brain,
@@ -17,7 +18,6 @@ import {
   Flame,
   Award,
 } from "lucide-react";
-import AvatarDashboard from "./AvatarDashBoard";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -118,6 +118,16 @@ function extractBodyPartCategoriesFromAnalyze(json: any): string {
   }
   return cats.size ? Array.from(cats).join(",") : "unknown";
 }
+
+// Dynamically import AvatarDashboard with no SSR to prevent Canvas initialization issues
+const AvatarDashboard = dynamic(() => import("./AvatarDashBoard"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Loading avatar...</div>
+    </div>
+  ),
+});
 
 /* -------------------------
    Mock Data
