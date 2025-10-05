@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Upload, User, HeartPulse, Ruler, FileText, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,16 @@ import AuthButton from "./AuthButton";
 
 export default function ProfileCreation() {
   const [fileName, setFileName] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
+  const [age, setAge] = useState<string>("");
+  const [heightFeet, setHeightFeet] = useState<string>("");
+  const [heightInches, setHeightInches] = useState<string>("");
+  const [weight, setWeight] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
+  const [bloodType, setBloodType] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  
   const router = useRouter();
   const { user, isLoading } = useUser();
 
@@ -20,6 +30,80 @@ export default function ProfileCreation() {
       alert("Please upload a valid PDF file.");
       e.target.value = "";
       setFileName("");
+    }
+  };
+
+  // Load existing profile data when component mounts
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.data) {
+            setFullName(result.data.full_name || "");
+            setAge(result.data.age?.toString() || "");
+            setHeightFeet(result.data.height_feet?.toString() || "");
+            setHeightInches(result.data.height_inches?.toString() || "");
+            setWeight(result.data.weight?.toString() || "");
+            setGender(result.data.gender || "");
+            setBloodType(result.data.blood_type || "");
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName,
+          age,
+          heightFeet,
+          heightInches,
+          weight,
+          gender,
+          bloodType,
+          medicalRecordFile: fileName // Note: actual file upload would need additional handling
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmitMessage({ type: 'success', text: 'Profile saved successfully!' });
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
+      } else {
+        setSubmitMessage({ 
+          type: 'error', 
+          text: result.error || 'Failed to save profile. Please try again.' 
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting profile:', error);
+      setSubmitMessage({ 
+        type: 'error', 
+        text: 'An error occurred. Please try again.' 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -91,12 +175,39 @@ export default function ProfileCreation() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
+          onSubmit={handleSubmit}
           className="space-y-6 rounded-3xl bg-gradient-to-b from-gray-900 to-black border border-blue-600/30 p-8 shadow-2xl shadow-blue-600/20 spider-float"
         >
+          {/* Submit message */}
+          {submitMessage && (
+            <div className={`p-4 rounded-xl border ${
+              submitMessage.type === 'success' 
+                ? 'bg-green-900/30 border-green-500/50 text-green-300' 
+                : 'bg-red-900/30 border-red-500/50 text-red-300'
+            }`}>
+              {submitMessage.text}
+            </div>
+          )}
+
           {/* Input fields */}
           <div className="grid md:grid-cols-2 gap-6">
-            <FormInput label="Full Name" placeholder="Peter Parker" icon={<User />} />
-            <FormInput label="Age" type="number" placeholder="18" icon={<HeartPulse />} />
+            <FormInput 
+              label="Full Name" 
+              placeholder="Peter Parker" 
+              icon={<User />} 
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+            <FormInput 
+              label="Age" 
+              type="number" 
+              placeholder="18" 
+              icon={<HeartPulse />} 
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              required
+            />
 
             {/* Height in ft/in */}
             <div>
@@ -105,12 +216,16 @@ export default function ProfileCreation() {
                 <input
                   type="number"
                   placeholder="5"
+                  value={heightFeet}
+                  onChange={(e) => setHeightFeet(e.target.value)}
                   className="w-1/2 bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white placeholder-gray-500 transition-all duration-300"
                 />
                 <span className="text-gray-400">ft</span>
                 <input
                   type="number"
                   placeholder="10"
+                  value={heightInches}
+                  onChange={(e) => setHeightInches(e.target.value)}
                   className="w-1/2 bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white placeholder-gray-500 transition-all duration-300"
                 />
                 <span className="text-gray-400">in</span>
@@ -118,32 +233,47 @@ export default function ProfileCreation() {
             </div>
 
             {/* Weight in lbs */}
-            <FormInput label="Weight (lbs)" type="number" placeholder="150" icon={<Ruler />} />
+            <FormInput 
+              label="Weight (lbs)" 
+              type="number" 
+              placeholder="150" 
+              icon={<Ruler />} 
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+            />
           </div>
 
           {/* Gender and Blood Type */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm mb-2 text-gray-400">Gender</label>
-              <select className="w-full bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white transition-all duration-300">
+              <select 
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full bg-black/50 border border-blue-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 focus:outline-none text-white transition-all duration-300"
+              >
                 <option value="">Select</option>
-                <option>Male</option>
-                <option>Female</option>
-                <option>Other</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
               </select>
             </div>
             <div>
               <label className="block text-sm mb-2 text-gray-400">Blood Type</label>
-              <select className="w-full bg-black/50 border border-red-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500/50 focus:outline-none text-white transition-all duration-300">
+              <select 
+                value={bloodType}
+                onChange={(e) => setBloodType(e.target.value)}
+                className="w-full bg-black/50 border border-red-600/20 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500/50 focus:outline-none text-white transition-all duration-300"
+              >
                 <option value="">Select</option>
-                <option>A+</option>
-                <option>A-</option>
-                <option>B+</option>
-                <option>B-</option>
-                <option>AB+</option>
-                <option>AB-</option>
-                <option>O+</option>
-                <option>O-</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
               </select>
             </div>
           </div>
@@ -179,9 +309,10 @@ export default function ProfileCreation() {
           <div className="pt-6 text-center">
             <button
               type="submit"
-              className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-8 py-3 font-semibold text-white shadow-lg shadow-blue-600/40 hover:shadow-red-600/40 transition-all duration-300 hover:scale-105 spider-pulse"
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-8 py-3 font-semibold text-white shadow-lg shadow-blue-600/40 hover:shadow-red-600/40 transition-all duration-300 hover:scale-105 spider-pulse disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              Save Profile
+              {isSubmitting ? 'Saving...' : 'Save Profile'}
             </button>
           </div>
         </motion.form>
@@ -203,11 +334,17 @@ const FormInput = ({
   type = "text",
   placeholder,
   icon,
+  value,
+  onChange,
+  required = false,
 }: {
   label: string;
   type?: string;
   placeholder?: string;
   icon?: React.ReactNode;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
 }) => (
   <div>
     <label className="block text-sm mb-2 text-gray-400">{label}</label>
@@ -216,6 +353,9 @@ const FormInput = ({
       <input
         type={type}
         placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required={required}
         className="w-full bg-transparent outline-none text-white placeholder-gray-500"
       />
     </div>
