@@ -1,5 +1,6 @@
 "use client";
-
+import GlossaryHighlighter from "@/components/GlossaryHighlighter";
+import { MED_GLOSSARY } from "../medGlossary";
 import React from "react";
 import { motion } from "framer-motion";
 import {
