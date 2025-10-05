@@ -399,16 +399,25 @@ export default function ProfileCreation() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.div
+            <motion.button
+              type="button"
+              onClick={() => router.push('/')}
+              aria-label="Go to home"
               className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-red-900 grid place-items-center shadow-lg shadow-blue-900/50"
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
             >
               <Sparkles size={16} className="text-white" />
-            </motion.div>
-            <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">
-              Nomi.ai
-            </span>
+            </motion.button>
+            <button
+              onClick={() => router.push('/')}
+              style={{ all: "unset", cursor: "pointer" }}
+              aria-label="Go to home"
+            >
+              <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">
+                Nomi.ai
+              </span>
+            </button>
           </motion.div>
           <motion.div
             className="flex items-center gap-3"
@@ -416,17 +425,6 @@ export default function ProfileCreation() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.button
-              onClick={() => router.push("/")}
-              className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 hover:from-blue-800 hover:to-red-800 border border-blue-900/50 px-4 py-2 text-sm font-semibold backdrop-blur-sm transition-all duration-300"
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)",
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Home
-            </motion.button>
             <AuthButton />
           </motion.div>
         </div>

@@ -238,11 +238,11 @@ export default function MedTwinDashboard() {
             {/* Streak Indicator */}
             <div className="flex items-center gap-1.5 ml-4">
               <Flame size={18} className="text-orange-400" />
-              <span className="text-lg font-bold text-orange-400">7</span>
+              <span className="text-lg font-bold text-orange-400">2</span>
             </div>
 
             <motion.button 
-              onClick={() => router.push('/profile')}
+              onClick={() => router.push('/profile/view')}
               className="rounded-full bg-gradient-to-r from-purple-900/50 to-blue-900/50 hover:from-purple-800 hover:to-blue-800 border border-blue-900/50 w-11 h-11 flex items-center justify-center transition-all duration-300"
               whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(30, 58, 138, 0.5)" }}
               whileTap={{ scale: 0.95 }}
@@ -580,7 +580,7 @@ export default function MedTwinDashboard() {
                 whileHover={{ scale: 1.02 }}
               >
                 <Flame size={12} className="text-orange-400" />
-                <div className="text-xs font-bold text-orange-400">7</div>
+                <div className="text-xs font-bold text-orange-400">2</div>
                 <div className="text-[9px] text-gray-400">streak</div>
               </motion.div>
               

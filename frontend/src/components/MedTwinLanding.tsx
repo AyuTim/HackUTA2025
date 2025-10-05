@@ -365,12 +365,12 @@ export default function MedTwinLanding() {
             {
               step: 1,
               title: "Build Profile",
-              text: "Create your avatar and set preferences.",
+              text: "Create your avatar and enter biodata.",
             },
             {
               step: 2,
               title: "Upload Records",
-              text: "PDFs/DICOM parsed with OCR; linked to organs and timeline.",
+              text: "PDFs parsed with Gemini API",
             },
             {
               step: 3,
@@ -380,7 +380,7 @@ export default function MedTwinLanding() {
             {
               step: 4,
               title: "Share Safely",
-              text: "NFC/QR pass for visits; revoke anytime.",
+              text: "NFC pass for visits.",
             },
           ].map((s, i) => (
             <div
@@ -428,7 +428,7 @@ export default function MedTwinLanding() {
 
       {/* FOOTER */}
       <footer className="py-10 text-center text-xs text-gray-500 border-t border-blue-600/20">
-        © {new Date().getFullYear()} Nomi.ai. For demo purposes only.
+        © {new Date().getFullYear()} Nomi.ai.
       </footer>
     </div>
   );
