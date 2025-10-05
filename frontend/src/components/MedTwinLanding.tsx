@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AuthButton from "./AuthButton";
 import dynamic from "next/dynamic";
 
@@ -47,6 +47,34 @@ const Glow = ({ className = "" }: { className?: string }) => (
 export default function MedTwinLanding() {
   const router = useRouter();
   const { user, isLoading } = useUser();
+  const [hasProfile, setHasProfile] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  
+  // Check if user has a profile
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (!user) {
+        setCheckingProfile(false);
+        setHasProfile(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const result = await response.json();
+          setHasProfile(result.data !== null && result.data !== undefined);
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        setHasProfile(false);
+      } finally {
+        setCheckingProfile(false);
+      }
+    };
+
+    checkProfile();
+  }, [user]);
   
   // Show loading while checking auth
   if (isLoading) {
@@ -186,16 +214,37 @@ export default function MedTwinLanding() {
               clarity, privacy, and control.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href="#preview"
-                className="group inline-flex items-center gap-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 px-5 py-3 border border-blue-600/30 hover:border-blue-600/50 transition-all duration-300 web-sway"
+              <button
+                onClick={() => {
+                  if (user && hasProfile) {
+                    router.push('/dashboard');
+                  } else {
+                    router.push('/profile');
+                  }
+                }}
+                disabled={checkingProfile}
+                className="group inline-flex items-center gap-2 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 px-5 py-3 border border-blue-600/30 hover:border-blue-600/50 transition-all duration-300 web-sway disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                See the demo{" "}
-                <ChevronRight
-                  className="group-hover:translate-x-0.5 transition"
-                  size={16}
-                />
-              </a>
+                {checkingProfile ? (
+                  'Loading...'
+                ) : user && hasProfile ? (
+                  <>
+                    Dashboard{" "}
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition"
+                      size={16}
+                    />
+                  </>
+                ) : (
+                  <>
+                    Create Digital Twin{" "}
+                    <ChevronRight
+                      className="group-hover:translate-x-0.5 transition"
+                      size={16}
+                    />
+                  </>
+                )}
+              </button>
               <a
                 href="#cta"
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-5 py-3 font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse"
@@ -276,8 +325,18 @@ export default function MedTwinLanding() {
                 <li>Private-by-default, on your device</li>
               </ul>
               <div className="pt-2 flex gap-3">
-                <button className="rounded-xl bg-blue-600/10 px-4 py-2 border border-blue-600/30 hover:bg-blue-600/20 transition-all duration-300 web-sway">
-                  Open Dashboard
+                <button 
+                  onClick={() => {
+                    if (user && hasProfile) {
+                      router.push('/dashboard');
+                    } else {
+                      router.push('/profile');
+                    }
+                  }}
+                  disabled={checkingProfile}
+                  className="rounded-xl bg-blue-600/10 px-4 py-2 border border-blue-600/30 hover:bg-blue-600/20 transition-all duration-300 web-sway disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {checkingProfile ? 'Loading...' : user && hasProfile ? 'Open Dashboard' : 'Create Digital Twin'}
                 </button>
                 <button className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 font-semibold shadow-lg shadow-blue-600/30 hover:shadow-red-600/30 transition-all duration-300 hover:scale-105 spider-pulse">
                   Try What-If
