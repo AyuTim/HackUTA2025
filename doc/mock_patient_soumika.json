@@ -1,0 +1,412 @@
+{
+  "user": {
+    "id": "u_soumika_001",
+    "name": "Soumika Seelam",
+    "dob": "2004-07-12",
+    "height_cm": 166,
+    "weight_kg": 58,
+    "gender": "female",
+    "blood_type": "B+",
+    "insurance": "BlueCross BlueShield Blue Edge PPO",
+    "allergies": [
+      "Penicillin"
+    ],
+    "family_history": [
+      "Gastroesophageal reflux disease (father)",
+      "Sciatica (mother) — previously severe, now manageable; pain with back strain"
+    ],
+    "created_at": "2025-10-04T10:00:00Z"
+  },
+  "conditions": [
+    {
+      "code": "M41.9",
+      "label": "Scoliosis (unspecified)",
+      "onset_date": "2019-08-01",
+      "status": "active",
+      "details": "Mild thoracolumbar curve; posture exercises recommended."
+    },
+    {
+      "code": "S83.106A",
+      "label": "Dislocation of left knee (history)",
+      "onset_date": "2025-06-12",
+      "status": "healing",
+      "details": "Acute event June 2025; reduced and braced; PT ongoing."
+    },
+    {
+      "code": "M23.5",
+      "label": "Left knee ligament sprain/tear (associated)",
+      "onset_date": "2025-06-12",
+      "status": "healing",
+      "details": "Partial involvement suspected; strengthening + proprioception exercises."
+    },
+    {
+      "code": "K29.70",
+      "label": "Gastritis, unspecified, without bleeding",
+      "onset_date": "2025-09-20",
+      "status": "active",
+      "details": "Post-meal discomfort; on omeprazole trial."
+    },
+    {
+      "code": "L70.0",
+      "label": "Acne vulgaris — prior isotretinoin (Accutane)",
+      "onset_date": "2024-01-05",
+      "status": "resolved",
+      "details": "7-month course; currently on topical azelaic acid 10% nightly."
+    }
+  ],
+  "medications": [
+    {
+      "name": "Omeprazole",
+      "dose": "20 mg",
+      "route": "oral",
+      "frequency": "daily before breakfast",
+      "start_date": "2025-09-20",
+      "indication": "gastritis / reflux"
+    },
+    {
+      "name": "Ibuprofen",
+      "dose": "400 mg",
+      "route": "oral",
+      "frequency": "q8h PRN pain",
+      "start_date": "2025-06-13",
+      "indication": "knee pain / menstrual cramps"
+    },
+    {
+      "name": "Azelaic Acid (Topical)",
+      "dose": "10%",
+      "route": "topical",
+      "frequency": "nightly",
+      "start_date": "2024-09-01",
+      "indication": "post-acne maintenance"
+    }
+  ],
+  "symptoms": [
+    {
+      "body_region": "abdomen",
+      "label": "stomach pain / bloating",
+      "severity": 6,
+      "onset_date": "2025-10-01",
+      "notes": "Worse after spicy foods; occasional nocturnal reflux."
+    },
+    {
+      "body_region": "left_knee",
+      "label": "knee soreness / instability",
+      "severity": 4,
+      "onset_date": "2025-06-20",
+      "notes": "After longer walks; improved with brace and PT."
+    },
+    {
+      "body_region": "left_wrist",
+      "label": "typing strain pain",
+      "severity": 5,
+      "onset_date": "2025-09-25",
+      "notes": "Tingling with >3h typing; ergonomic tweaks help."
+    },
+    {
+      "body_region": "pelvis",
+      "label": "menstrual cramps",
+      "severity": 7,
+      "onset_date": "2025-10-03",
+      "notes": "First 48h of cycle; responds to ibuprofen."
+    },
+    {
+      "body_region": "abdomen",
+      "label": "stomach pain",
+      "severity": 5,
+      "onset_date": "2025-10-04"
+    },
+    {
+      "body_region": "abdomen",
+      "label": "stomach pain",
+      "severity": 5,
+      "onset_date": "2025-10-04"
+    }
+  ],
+  "lab_results": [
+    {
+      "test_name": "CBC (Complete Blood Count)",
+      "collection_date": "2025-09-18",
+      "findings": "Within normal limits."
+    },
+    {
+      "test_name": "Lipid Panel",
+      "collection_date": "2025-09-18",
+      "findings": "LDL 128 mg/dL (borderline high), HDL 55 mg/dL, Total 190 mg/dL."
+    },
+    {
+      "test_name": "H. pylori Antigen (Stool)",
+      "collection_date": "2025-09-21",
+      "findings": "Negative."
+    }
+  ],
+  "files": [
+    {
+      "id": "f_knee_ed_2025_06",
+      "name": "ED_Knee_Visit_2025-06-12.pdf",
+      "type": "pdf",
+      "uploaded_at": "2025-06-13T11:00:00Z",
+      "summary": "Left knee dislocation reduced; brace; ortho referral."
+    },
+    {
+      "id": "f_knee_pt_2025_07",
+      "name": "PT_Knee_Plan_2025-07-01.pdf",
+      "type": "pdf",
+      "uploaded_at": "2025-07-01T09:00:00Z",
+      "summary": "Strengthening, ROM, balance; gradual return to activity."
+    },
+    {
+      "id": "f_gi_note",
+      "name": "GI_Clinic_Note_2025-09-20.pdf",
+      "type": "pdf",
+      "uploaded_at": "2025-09-20T09:30:00Z",
+      "summary": "Gastritis suspected; PPI 20 mg daily; diet triggers review."
+    },
+    {
+      "id": "f_wrist_note",
+      "name": "Wrist_Strain_Note_2025-09-26.pdf",
+      "type": "pdf",
+      "uploaded_at": "2025-09-26T10:45:00Z",
+      "summary": "Overuse strain; rest, brace, ergonomic changes."
+    },
+    {
+      "id": "f_lab_results",
+      "name": "Lab_Results_2025-09-18.pdf",
+      "type": "pdf",
+      "uploaded_at": "2025-09-18T08:15:00Z",
+      "summary": "CBC normal, LDL borderline high."
+    }
+  ],
+  "entities": [
+    {
+      "body_region": "left_knee",
+      "entity_type": "diagnosis",
+      "text": "Left knee dislocation (June 2025) — reduced; PT prescribed.",
+      "start_date": "2025-06-12",
+      "source_file_id": "f_knee_ed_2025_06"
+    },
+    {
+      "body_region": "left_knee",
+      "entity_type": "note",
+      "text": "PT plan: quad/hamstring strengthening, proprioception.",
+      "start_date": "2025-07-01",
+      "source_file_id": "f_knee_pt_2025_07"
+    },
+    {
+      "body_region": "abdomen",
+      "entity_type": "diagnosis",
+      "text": "Gastritis — omeprazole 20 mg daily; avoid spice/caffeine.",
+      "start_date": "2025-09-20",
+      "source_file_id": "f_gi_note"
+    },
+    {
+      "body_region": "left_wrist",
+      "entity_type": "diagnosis",
+      "text": "Wrist overuse strain; ergonomic correction.",
+      "start_date": "2025-09-26",
+      "source_file_id": "f_wrist_note"
+    }
+  ],
+  "metrics_window_days": 21,
+  "observations_daily": [
+    {
+      "date": "2025-09-15",
+      "sleep_min": 420,
+      "steps": 7400,
+      "water_oz": 64,
+      "protein_g": 82,
+      "carbs_g": 210,
+      "fat_g": 58,
+      "exercise_min": 35
+    },
+    {
+      "date": "2025-09-16",
+      "sleep_min": 390,
+      "steps": 6800,
+      "water_oz": 56,
+      "protein_g": 78,
+      "carbs_g": 230,
+      "fat_g": 62,
+      "exercise_min": 25
+    },
+    {
+      "date": "2025-09-17",
+      "sleep_min": 360,
+      "steps": 5200,
+      "water_oz": 40,
+      "protein_g": 70,
+      "carbs_g": 245,
+      "fat_g": 65,
+      "exercise_min": 0
+    },
+    {
+      "date": "2025-09-18",
+      "sleep_min": 410,
+      "steps": 8000,
+      "water_oz": 72,
+      "protein_g": 90,
+      "carbs_g": 220,
+      "fat_g": 55,
+      "exercise_min": 40
+    },
+    {
+      "date": "2025-09-19",
+      "sleep_min": 370,
+      "steps": 6100,
+      "water_oz": 48,
+      "protein_g": 76,
+      "carbs_g": 235,
+      "fat_g": 60,
+      "exercise_min": 20
+    },
+    {
+      "date": "2025-09-20",
+      "sleep_min": 395,
+      "steps": 6900,
+      "water_oz": 60,
+      "protein_g": 84,
+      "carbs_g": 225,
+      "fat_g": 58,
+      "exercise_min": 30
+    },
+    {
+      "date": "2025-09-21",
+      "sleep_min": 430,
+      "steps": 8200,
+      "water_oz": 70,
+      "protein_g": 92,
+      "carbs_g": 215,
+      "fat_g": 52,
+      "exercise_min": 45
+    },
+    {
+      "date": "2025-09-22",
+      "sleep_min": 345,
+      "steps": 5000,
+      "water_oz": 42,
+      "protein_g": 68,
+      "carbs_g": 250,
+      "fat_g": 66,
+      "exercise_min": 0
+    },
+    {
+      "date": "2025-09-23",
+      "sleep_min": 380,
+      "steps": 5600,
+      "water_oz": 50,
+      "protein_g": 74,
+      "carbs_g": 238,
+      "fat_g": 61,
+      "exercise_min": 15
+    },
+    {
+      "date": "2025-09-24",
+      "sleep_min": 400,
+      "steps": 7000,
+      "water_oz": 64,
+      "protein_g": 88,
+      "carbs_g": 222,
+      "fat_g": 57,
+      "exercise_min": 35
+    },
+    {
+      "date": "2025-09-25",
+      "sleep_min": 360,
+      "steps": 5200,
+      "water_oz": 44,
+      "protein_g": 72,
+      "carbs_g": 246,
+      "fat_g": 64,
+      "exercise_min": 0
+    },
+    {
+      "date": "2025-09-26",
+      "sleep_min": 415,
+      "steps": 7600,
+      "water_oz": 66,
+      "protein_g": 86,
+      "carbs_g": 228,
+      "fat_g": 59,
+      "exercise_min": 30
+    },
+    {
+      "date": "2025-09-27",
+      "sleep_min": 390,
+      "steps": 6100,
+      "water_oz": 52,
+      "protein_g": 79,
+      "carbs_g": 236,
+      "fat_g": 60,
+      "exercise_min": 20
+    },
+    {
+      "date": "2025-09-28",
+      "sleep_min": 440,
+      "steps": 8300,
+      "water_oz": 72,
+      "protein_g": 95,
+      "carbs_g": 210,
+      "fat_g": 50,
+      "exercise_min": 50
+    },
+    {
+      "date": "2025-09-29",
+      "sleep_min": 350,
+      "steps": 4900,
+      "water_oz": 40,
+      "protein_g": 66,
+      "carbs_g": 252,
+      "fat_g": 68,
+      "exercise_min": 0
+    },
+    {
+      "date": "2025-09-30",
+      "sleep_min": 385,
+      "steps": 5800,
+      "water_oz": 54,
+      "protein_g": 80,
+      "carbs_g": 232,
+      "fat_g": 60,
+      "exercise_min": 20
+    },
+    {
+      "date": "2025-10-01",
+      "sleep_min": 370,
+      "steps": 5400,
+      "water_oz": 48,
+      "protein_g": 78,
+      "carbs_g": 238,
+      "fat_g": 62,
+      "exercise_min": 15
+    },
+    {
+      "date": "2025-10-02",
+      "sleep_min": 390,
+      "steps": 6500,
+      "water_oz": 56,
+      "protein_g": 82,
+      "carbs_g": 230,
+      "fat_g": 59,
+      "exercise_min": 25
+    },
+    {
+      "date": "2025-10-03",
+      "sleep_min": 340,
+      "steps": 5100,
+      "water_oz": 40,
+      "protein_g": 70,
+      "carbs_g": 245,
+      "fat_g": 65,
+      "exercise_min": 0
+    },
+    {
+      "date": "2025-10-04",
+      "sleep_min": 405,
+      "steps": 7200,
+      "water_oz": 60,
+      "protein_g": 86,
+      "carbs_g": 225,
+      "fat_g": 58,
+      "exercise_min": 30
+    }
+  ]
+}
