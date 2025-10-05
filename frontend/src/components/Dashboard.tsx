@@ -600,11 +600,7 @@ export default function MedTwinDashboard() {
               </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-[10px]">
-<<<<<<< Updated upstream
-              {Array.from({ length: firstWeekday ?? 0}).map((_, i) => (
-=======
                {Array.from({ length: firstWeekday ?? 0 }).map((_, i) => (
->>>>>>> Stashed changes
                 <div key={`b-${i}`} className="h-7 rounded bg-gray-900/50 opacity-30 border border-blue-900/20" />
               ))}
               {checkins.map((d, i) => (
