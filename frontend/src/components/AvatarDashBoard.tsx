@@ -1,14 +1,50 @@
 "use client";
 
-import React, { Suspense, useMemo, useState, useRef } from "react";
+import React, { Suspense, useMemo, useState, useRef, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-type PartName = "Head" | "Arms" | "Legs" | "Stomach" | "Feet" | "Hair" | "Back" | "Unknown";
+/* =========================
+   Supabase (safe client)
+========================= */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnon ? createClient(supabaseUrl, supabaseAnon) : null;
 
-// helper: normalize names like "Wolf3D_Outfit_Top" → "wolf3d outfit top"
+/* =========================
+   Types
+========================= */
+type PartName =
+  | "Head"
+  | "Arms"
+  | "Legs"
+  | "Stomach"
+  | "Feet"
+  | "Hair"
+  | "Back"
+  | "Unknown";
+
+type DocRow = {
+  id?: string | number;
+  file_name: string;
+  file_path: string | null;
+  document_type: string | null;
+  extracted_text: string | null; // stored as TEXT (stringified JSON)
+  body_part: string | null; // may be CSV like "head,stomach"
+};
+
+/* =========================
+   Helpers
+========================= */
+
+// normalize mesh names like "Wolf3D_Outfit_Top" → "wolf3d outfit top"
 function norm(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 // explicit overrides for tricky mesh names
@@ -25,14 +61,74 @@ function mapMeshNameToPart(name: string | undefined): PartName {
   const n = norm(name);
   if (OVERRIDES[n]) return OVERRIDES[n];
   if (/\b(head|skull|face)\b/.test(n)) return "Head";
-  if (/\b(arm|shoulder|hand|wrist|clavicle|forearm|upperarm)\b/.test(n)) return "Arms";
+  if (/\b(arm|shoulder|hand|wrist|clavicle|forearm|upperarm)\b/.test(n))
+    return "Arms";
   if (/\b(leg|thigh|knee|calf)\b/.test(n)) return "Legs";
-  if (/\b(stomach|torso|abdomen|chest|upperchest|rib|pec|body|top)\b/.test(n)) return "Stomach";
+  if (/\b(stomach|torso|abdomen|chest|upperchest|rib|pec|body|top)\b/.test(n))
+    return "Stomach";
   if (/\b(foot|feet|toe)\b/.test(n)) return "Feet";
   if (/\b(back|spine)\b/.test(n)) return "Back";
   return "Unknown";
 }
 
+/** Map the clicked PartName to the body_part categories used in DB.
+ * Your DB supported: head, hair, stomach, legs, feet, arms (and sometimes CSV).
+ * We'll use the main one, and when "Back" is clicked we also try "back".
+ */
+function partNameToBodyPartKey(p: PartName): string[] {
+  switch (p) {
+    case "Head":
+      return ["head"];
+    case "Hair":
+      return ["hair"];
+    case "Stomach":
+      return ["stomach", "abdomen", "abdominal"]; // just in case someone saved variants
+    case "Legs":
+      return ["legs", "leg"];
+    case "Feet":
+      return ["feet", "foot"];
+    case "Arms":
+      return ["arms", "arm"];
+    case "Back":
+      // not in your original set, but if a doc saved "back" manually, include it
+      return ["back"];
+    default:
+      return ["unknown"];
+  }
+}
+
+/** Try to pull a small human-readable snippet from extracted_text JSON. */
+function extractSnippet(extracted_text: string | null): string | null {
+  if (!extracted_text) return null;
+  try {
+    const json = JSON.parse(extracted_text);
+    const data = json?.data ?? json;
+    const findings = Array.isArray(data?.findings) ? data.findings : [];
+    if (findings.length) {
+      const first = findings[0];
+      const title =
+        first?.title ||
+        first?.name ||
+        first?.type ||
+        first?.impression ||
+        first?.summary;
+      const bp = first?.bodyPart || first?.region;
+      if (title && bp) return `${title} — ${bp}`;
+      if (title) return String(title);
+      if (bp) return String(bp);
+    }
+    // fallback: impression or summary fields commonly seen
+    const imp = data?.impression || data?.summary || data?.conclusion;
+    if (typeof imp === "string" && imp.length) return imp.slice(0, 140);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/* =========================
+   Model (R3F)
+========================= */
 function Model({
   url,
   onPartClick,
@@ -77,21 +173,29 @@ function Model({
             try {
               (m.material as any).userData ??= {};
               if ((m.material as any).color?.clone) {
-                (m.material as any).userData._origColor = (m.material as any).color.clone();
+                (m.material as any).userData._origColor = (
+                  m.material as any
+                ).color.clone();
                 (m.material as any).color.lerp(
                   new (m.material as any).color.constructor(0x4f79d6),
                   0.5
                 );
               }
               if ((m.material as any).emissive?.clone) {
-                (m.material as any).userData._origEmissive = (m.material as any).emissive.clone();
+                (m.material as any).userData._origEmissive = (
+                  m.material as any
+                ).emissive.clone();
                 (m.material as any).emissive.setHex?.(0x264fb8);
               }
             } catch {}
           }}
           onPointerMove={(e: any) => {
             e.stopPropagation();
-            onPartHover(mapMeshNameToPart(m.name || m.parent?.name), e.clientX, e.clientY);
+            onPartHover(
+              mapMeshNameToPart(m.name || m.parent?.name),
+              e.clientX,
+              e.clientY
+            );
           }}
           onPointerOut={(e: any) => {
             e.stopPropagation();
@@ -115,30 +219,96 @@ function Model({
   );
 }
 
+/* =========================
+   Main Component
+========================= */
 export default function AvatarDashboard() {
   const [selectedPart, setSelectedPart] = useState<PartName | null>(null);
   const [hoveredPart, setHoveredPart] = useState<PartName | null>(null);
-  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(null);
+  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(
+    null
+  );
+
+  const [docs, setDocs] = useState<DocRow[] | null>(null);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [docsError, setDocsError] = useState<string | null>(null);
 
   // ref to compute coordinates relative to this container
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  const fetchDocsForPart = useCallback(async (part: PartName) => {
+    setLoadingDocs(true);
+    setDocsError(null);
+    setDocs(null);
+
+    // without env keys, skip fetch
+    if (!supabase) {
+      setDocsError("Supabase not configured");
+      setLoadingDocs(false);
+      return;
+    }
+
+    // Build filter: body_part ILIKE %key% (or multiple)
+    const keys = partNameToBodyPartKey(part);
+    // Supabase .or() syntax: "body_part.ilike.%head%,body_part.ilike.%hair%"
+    const orExpr = keys.map((k) => `body_part.ilike.%${k}%`).join(",");
+    try {
+      let query = supabase
+        .from("documents")
+        .select("*")
+        .limit(12)
+        .order("file_name", { ascending: true });
+
+      if (keys.length === 1) {
+        query = query.ilike("body_part", `%${keys[0]}%`);
+      } else {
+        // @ts-ignore - supabase-js or() takes a string condition
+        query = query.or(orExpr);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        setDocsError(error.message);
+      } else {
+        setDocs(data || []);
+      }
+    } catch (err: any) {
+      setDocsError(err?.message || "Failed to load documents");
+    } finally {
+      setLoadingDocs(false);
+    }
+  }, []);
+
   return (
     <div ref={wrapperRef} className="w-full h-full relative">
-      <Canvas camera={{ position: [0, 1.0, 3.2], fov: 45 }} className="rounded-xl">
+      <Canvas
+        camera={{ position: [0, 1.0, 3.2], fov: 45 }}
+        className="rounded-xl"
+      >
         <ambientLight intensity={1.0} />
         <directionalLight intensity={0.9} position={[5, 10, 7]} />
         <hemisphereLight args={["#e8f0ff", "#222222", 0.35]} />
         <Suspense fallback={null}>
           <Model
             url="/model/soumika.glb"
-            onPartClick={(p) => setSelectedPart(p)}
+            onPartClick={(p) => {
+              setSelectedPart(p);
+              fetchDocsForPart(p);
+            }}
             onPartHover={(p, clientX, clientY) => {
               setHoveredPart(p);
-              if (p && clientX !== undefined && clientY !== undefined && wrapperRef.current) {
+              if (
+                p &&
+                clientX !== undefined &&
+                clientY !== undefined &&
+                wrapperRef.current
+              ) {
                 const rect = wrapperRef.current.getBoundingClientRect();
                 // store position relative to wrapper, place the tag just below the cursor
-                setPointerPos({ x: clientX - rect.left, y: clientY - rect.top + 16 });
+                setPointerPos({
+                  x: clientX - rect.left,
+                  y: clientY - rect.top + 16,
+                });
               } else {
                 setPointerPos(null);
               }
@@ -148,24 +318,93 @@ export default function AvatarDashboard() {
         </Suspense>
       </Canvas>
 
-      {/* Click popup (unchanged) */}
+      {/* Click popup with Supabase docs */}
       {selectedPart && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-black/80 text-white p-4 rounded-lg border border-white/10 max-w-xs w-full mx-4">
+          <div className="pointer-events-auto bg-black/85 text-white p-4 rounded-lg border border-white/10 max-w-md w-full mx-4">
             <div className="flex justify-between items-start gap-3">
               <div>
                 <div className="text-sm text-zinc-300">Selected part</div>
                 <div className="text-xl font-semibold mt-1">{selectedPart}</div>
               </div>
               <button
-                onClick={() => setSelectedPart(null)}
+                onClick={() => {
+                  setSelectedPart(null);
+                  setDocs(null);
+                  setDocsError(null);
+                }}
                 className="text-zinc-300 hover:text-white"
               >
                 Close
               </button>
             </div>
-            <div className="text-xs text-zinc-400 mt-3">
-              Click a body part to open this popup. Hover shows only the part name.
+
+            <div className="mt-3">
+              {loadingDocs ? (
+                <div className="flex items-center gap-2 text-blue-300 text-sm">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                    />
+                  </svg>
+                  Loading documents…
+                </div>
+              ) : docsError ? (
+                <div className="text-sm text-red-300">Error: {docsError}</div>
+              ) : docs && docs.length > 0 ? (
+                <ul className="space-y-2 max-h-60 overflow-auto">
+                  {docs.map((d, idx) => {
+                    const snippet = extractSnippet(d.extracted_text);
+                    return (
+                      <li
+                        key={`${d.file_name}-${idx}`}
+                        className="rounded-md border border-blue-900/30 bg-black/50 p-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-sm">
+                            {d.file_name}
+                          </div>
+                          <div className="text-[10px] text-zinc-400">
+                            {d.document_type || "Document"}
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-zinc-400 mt-1">
+                          Body part:{" "}
+                          <span className="text-blue-300">
+                            {d.body_part || "unknown"}
+                          </span>
+                        </div>
+                        {snippet && (
+                          <div className="text-xs text-zinc-300 mt-2 line-clamp-3">
+                            {snippet}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="text-sm text-zinc-400">
+                  No documents found for this body part.
+                </div>
+              )}
+            </div>
+
+            <div className="text-[11px] text-zinc-500 mt-3">
+              Tip: The match uses a contains search on{" "}
+              <code>documents.body_part</code> (e.g., <code>%head%</code>).
             </div>
           </div>
         </div>
