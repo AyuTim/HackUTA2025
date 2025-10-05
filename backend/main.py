@@ -189,69 +189,59 @@ async def analyze_pdf(
 # -----------------------------
 @app.post("/api/pdf/summary")
 def summarize_and_categorize(payload: dict = Body(...)):
-    """
-    Takes the JSON output from /api/pdf/analyze and:
-    - Produces a readable summary paragraph.
-    - Groups findings/labs/meds into body regions:
-      [head, arms, chest, back, stomach, legs, feet]
-    """
-    data = payload.get("data", {})
+    data = payload.get("data", {}) or {}
     findings = data.get("findings", []) or []
     labs = data.get("labs", []) or []
     meds = data.get("meds", []) or []
 
-    # Map various terms to your regions
+    # --- Updated body part mappings (now includes 'hair') ---
     part_map = {
         "brain": "head",
         "neuro": "head",
         "head": "head",
-
-        "heart": "chest",
-        "lungs": "chest",
-        "chest": "chest",
-
-        "back": "back",
-        "spine": "back",
+        "scalp": "hair",
+        "hair": "hair",
 
         "stomach": "stomach",
         "abdomen": "stomach",
         "liver": "stomach",
+        "pancreas": "stomach",
         "kidney": "stomach",
         "kidney_left": "stomach",
         "kidney_right": "stomach",
-        "pancreas": "stomach",
         "spleen": "stomach",
-        "intestines": "stomach",
+        "intestine": "stomach",
         "bladder": "stomach",
 
-        "arms": "arms",
-        "shoulder": "arms",
-        "left_shoulder": "arms",
-        "right_shoulder": "arms",
-
-        "legs": "legs",
+        "leg": "legs",
         "knee": "legs",
-        "left_knee": "legs",
-        "right_knee": "legs",
+        "thigh": "legs",
 
-        "feet": "feet",
         "foot": "feet",
+        "feet": "feet",
+        "ankle": "feet",
 
-        "general": "chest",  # sensible default for non-local findings
+        "arm": "arms",
+        "shoulder": "arms",
+        "wrist": "arms",
+        "hand": "arms",
+
+        # fallback if unclear
+        "general": "head"
     }
 
     def to_region(text: Optional[str]) -> str:
         t = (text or "").lower()
-        # exact contains
         for key, region in part_map.items():
             if key in t:
                 return region
-        return "chest"  # default bucket
+        return "head"  # default fallback
 
-    # init buckets
-    regions = ["head", "arms", "chest", "back", "stomach", "legs", "feet"]
+    # Initialize categories
+    regions = ["head", "hair", "stomach", "legs", "feet", "arms"]
     body_index = {r: {"findings": [], "labs": [], "meds": []} for r in regions}
 
+    # Group findings/labs/meds into their regions
     for f in findings:
         key = f.get("bodyPart") or f.get("region") or "general"
         body_index[to_region(key)]["findings"].append(f)
@@ -264,20 +254,20 @@ def summarize_and_categorize(payload: dict = Body(...)):
         key = m.get("relatedBodyPart") or "general"
         body_index[to_region(key)]["meds"].append(m)
 
-    # Compose readable summary
+    # --- Build readable summary ---
     parts_present = sorted({to_region(f.get("bodyPart") or f.get("region") or "general") for f in findings})
     summary_bits = []
     if findings:
         summary_bits.append(f"{len(findings)} finding(s) noted, involving: {', '.join(parts_present)}.")
-        # If any impression in first finding, echo it
         if findings[0].get("impression"):
             summary_bits.append(f"Impression: {findings[0]['impression']}")
     if labs:
-        summary_bits.append(f"{len(labs)} lab result(s) summarized (e.g., cholesterol panel).")
+        summary_bits.append(f"{len(labs)} lab result(s) summarized.")
     if meds:
-        summary_bits.append("Current meds: " + ", ".join(m.get("name", "?") for m in meds) + ".")
+        summary_bits.append("Current meds: " + ", ".join(m.get("name", '?') for m in meds) + ".")
     if not summary_bits:
         summary_bits.append("No significant abnormalities described in this record.")
+
     summary = " ".join(summary_bits)
 
     return {
