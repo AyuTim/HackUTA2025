@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Brain,
@@ -11,7 +11,6 @@ import {
   Stethoscope,
   Sparkles,
   BellRing,
-  ShieldCheck,
   Moon,
   GlassWater,
   User,
@@ -31,6 +30,94 @@ import {
   Area,
 } from "recharts";
 import Link from "next/link";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+/* -------------------------
+   Supabase (safe client)
+------------------------- */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnon ? createClient(supabaseUrl, supabaseAnon) : null;
+
+/* -------------------------
+   Body-part helpers
+------------------------- */
+type BodyCat =
+  | "head"
+  | "hair"
+  | "stomach"
+  | "legs"
+  | "feet"
+  | "arms"
+  | "unknown";
+
+const PART_MAP: Record<string, Exclude<BodyCat, "unknown">> = {
+  // head & hair
+  brain: "head",
+  neuro: "head",
+  head: "head",
+  scalp: "hair",
+  hair: "hair",
+  // stomach/abdomen
+  stomach: "stomach",
+  abdomen: "stomach",
+  abdominal: "stomach",
+  liver: "stomach",
+  pancreas: "stomach",
+  kidney: "stomach",
+  kidneys: "stomach",
+  renal: "stomach",
+  spleen: "stomach",
+  intestine: "stomach",
+  intestines: "stomach",
+  bowel: "stomach",
+  bladder: "stomach",
+  gastro: "stomach",
+  // legs
+  leg: "legs",
+  legs: "legs",
+  knee: "legs",
+  thigh: "legs",
+  femur: "legs",
+  tibia: "legs",
+  // feet
+  foot: "feet",
+  feet: "feet",
+  ankle: "feet",
+  toe: "feet",
+  toes: "feet",
+  calcaneus: "feet",
+  // arms
+  arm: "arms",
+  arms: "arms",
+  shoulder: "arms",
+  elbow: "arms",
+  wrist: "arms",
+  hand: "arms",
+  humerus: "arms",
+  radius: "arms",
+  ulna: "arms",
+};
+
+function toBodyCategory(raw?: string | null): BodyCat {
+  const t = (raw || "").toLowerCase();
+  for (const key of Object.keys(PART_MAP)) {
+    if (t.includes(key)) return PART_MAP[key];
+  }
+  return "unknown";
+}
+
+function extractBodyPartCategoriesFromAnalyze(json: any): string {
+  const data = json?.data ?? json;
+  const findings = Array.isArray(data?.findings) ? data.findings : [];
+  const cats = new Set<string>();
+  for (const f of findings) {
+    const src = f?.bodyPart || f?.region || "";
+    cats.add(toBodyCategory(src));
+  }
+  return cats.size ? Array.from(cats).join(",") : "unknown";
+}
 
 /* -------------------------
    Mock Data
@@ -51,8 +138,6 @@ const initialSleepData = [
   { day: "Fri", hrs: 6.8 },
 ];
 
-// Date-dependent values moved into the component to avoid SSR/client mismatch
-
 /* -------------------------
    Panel Component
 ------------------------- */
@@ -72,7 +157,7 @@ function Panel({ title, icon, children, className = "" }: PanelProps) {
       className={`rounded-2xl border border-blue-900/30 bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-xl p-4 shadow-2xl shadow-blue-900/20 hover:shadow-red-900/20 hover:border-red-900/30 transition-all duration-300 ${className}`}
     >
       <div className="flex items-center gap-2 mb-3 text-sm font-semibold">
-        <motion.span 
+        <motion.span
           className="text-blue-400"
           animate={{ rotate: [0, 5, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
@@ -87,20 +172,21 @@ function Panel({ title, icon, children, className = "" }: PanelProps) {
 }
 
 /* -------------------------
-   Main Dashboard Component
+   Main Dashboard
 ------------------------- */
 export default function MedTwinDashboard() {
   const router = useRouter();
   const [waterCount, setWaterCount] = useState(0);
   const [filledCups, setFilledCups] = useState<boolean[]>(Array(8).fill(false));
   const [sleepHours, setSleepHours] = useState(7.0);
-  // client-only date/checkin state to avoid hydration mismatch
   const [daysInMonth, setDaysInMonth] = useState<number | null>(null);
   const [firstWeekday, setFirstWeekday] = useState<number | null>(null);
-  const [checkins, setCheckins] = useState<Array<{ day: number; ok: boolean }>>([]);
+  const [checkins, setCheckins] = useState<Array<{ day: number; ok: boolean }>>(
+    []
+  );
   const [checkedCount, setCheckedCount] = useState<number>(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const now = new Date();
     const YEAR = now.getFullYear();
     const MONTH = now.getMonth();
@@ -116,23 +202,21 @@ export default function MedTwinDashboard() {
     setFirstWeekday(FIRST_WEEKDAY);
     setCheckedCount(generated.filter((d) => d.ok).length);
   }, []);
+
   const [sleepHoursWhole, setSleepHoursWhole] = useState(7);
   const [sleepMinutes, setSleepMinutes] = useState(0);
 
   const handleHoursScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
     const scrollTop = element.scrollTop;
-    const itemHeight = 40; // height of each item (h-10 = 40px)
-    const containerHeight = 128; // h-32 = 128px
-    const paddingTop = 44; // py-11 = 44px top padding
-    
-    // Calculate which item is at the center of the viewport
-    const centerOfViewport = containerHeight / 2; // 64px from top of viewport
-    const centerInContent = scrollTop + centerOfViewport; // Position in scrollable content
-    const centerRelativeToFirstItem = centerInContent - paddingTop; // Subtract top padding
+    const itemHeight = 40;
+    const containerHeight = 128;
+    const paddingTop = 44;
+    const centerOfViewport = containerHeight / 2;
+    const centerInContent = scrollTop + centerOfViewport;
+    const centerRelativeToFirstItem = centerInContent - paddingTop;
     const centeredIndex = Math.round(centerRelativeToFirstItem / itemHeight);
     const clampedIndex = Math.max(0, Math.min(12, centeredIndex));
-    
     if (clampedIndex !== sleepHoursWhole) {
       setSleepHoursWhole(clampedIndex);
       setSleepHours(clampedIndex + sleepMinutes / 60);
@@ -145,7 +229,6 @@ export default function MedTwinDashboard() {
     const itemHeight = 40;
     const containerHeight = 128;
     const paddingTop = 44;
-    
     const centerOfViewport = containerHeight / 2;
     const centerInContent = scrollTop + centerOfViewport;
     const centerRelativeToFirstItem = centerInContent - paddingTop;
@@ -153,18 +236,106 @@ export default function MedTwinDashboard() {
     const minutesValues = [0, 15, 30, 45];
     const clampedIndex = Math.max(0, Math.min(3, centeredIndex));
     const selectedMinutes = minutesValues[clampedIndex];
-    
     if (selectedMinutes !== sleepMinutes) {
       setSleepMinutes(selectedMinutes);
       setSleepHours(sleepHoursWhole + selectedMinutes / 60);
     }
   };
 
+  /* ---------- Right-column: Upload PDF with DB insert ---------- */
+  const [dashUploads, setDashUploads] = useState<string[]>([]);
+  const [dashIsAnalyzing, setDashIsAnalyzing] = useState(false);
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
+  const handleDashPdfUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const pdfs = files.filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    const nonPdfs = files.filter(
+      (f) =>
+        !(f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"))
+    );
+
+    if (nonPdfs.length) {
+      alert(
+        `Ignored non-PDF files:\n- ${nonPdfs.map((f) => f.name).join("\n- ")}`
+      );
+    }
+    if (!pdfs.length) {
+      e.target.value = "";
+      return;
+    }
+
+    setDashIsAnalyzing(true);
+
+    for (const file of pdfs) {
+      try {
+        // 1) analyze with backend
+        const form = new FormData();
+        form.append("pdf", file);
+        form.append("mode", "json");
+        const resp = await fetch(`${API_BASE}/api/pdf/analyze`, {
+          method: "POST",
+          body: form,
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err?.detail || `Analyze failed (${resp.status})`;
+          alert(`${file.name}: ${msg}`);
+          continue;
+        }
+
+        const analyzeJson = await resp.json();
+
+        // 2) derive body_part + build insert payload
+        const bodyPartCsv = extractBodyPartCategoriesFromAnalyze(analyzeJson);
+        const docType = "Medical Report";
+        const filePathGuess = `uploads/${file.name}`; // adjust if you use storage
+
+        // 3) insert into Supabase
+        if (supabase) {
+          const { error } = await supabase.from("documents").insert([
+            {
+              file_name: file.name,
+              file_path: filePathGuess,
+              document_type: docType,
+              extracted_text: JSON.stringify(analyzeJson),
+              body_part: bodyPartCsv,
+            },
+          ]);
+
+          if (error) {
+            alert(`Database save failed for ${file.name}: ${error.message}`);
+            continue;
+          }
+        } else {
+          console.warn("Supabase env missing; skipping DB insert.");
+        }
+
+        // 4) UI updates + success alert
+        setDashUploads((prev) => Array.from(new Set([...prev, file.name])));
+        alert(`✅ ${file.name} analyzed and saved to database successfully!`);
+      } catch (err: any) {
+        alert(`${file.name}: ${err?.message || "Upload failed"}`);
+      }
+    }
+
+    setDashIsAnalyzing(false);
+    e.target.value = "";
+  };
+
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* Animated glowing background */}
       <div className="pointer-events-none absolute inset-0">
-        <motion.div 
+        <motion.div
           className="absolute inset-x-0 top-0 h-[40rem] bg-gradient-to-br from-blue-900/30 via-purple-900/15 to-red-900/30 blur-3xl"
           animate={{
             scale: [1, 1.1, 1],
@@ -173,10 +344,10 @@ export default function MedTwinDashboard() {
           transition={{
             duration: 8,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         />
-        <motion.div 
+        <motion.div
           className="absolute inset-x-0 bottom-0 h-[40rem] bg-gradient-to-tr from-red-900/30 via-pink-900/15 to-blue-900/30 blur-3xl"
           animate={{
             scale: [1, 1.2, 1],
@@ -186,7 +357,7 @@ export default function MedTwinDashboard() {
             duration: 10,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 1
+            delay: 1,
           }}
         />
       </div>
@@ -195,16 +366,27 @@ export default function MedTwinDashboard() {
       <div className="pointer-events-none absolute inset-0 opacity-15">
         {/* Top Right Web */}
         <svg className="absolute top-0 right-0 w-64 h-64" viewBox="0 0 200 200">
-          <path d="M200 0 L100 100 L200 100 Z M200 0 L120 20 M200 20 L140 40 M200 40 L160 60 M200 60 L180 80" 
-                stroke="white" strokeWidth="1.5" fill="none"/>
-          <circle cx="100" cy="100" r="4" fill="white"/>
+          <path
+            d="M200 0 L100 100 L200 100 Z M200 0 L120 20 M200 20 L140 40 M200 40 L160 60 M200 60 L180 80"
+            stroke="white"
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <circle cx="100" cy="100" r="4" fill="white" />
         </svg>
 
         {/* Bottom Left Web */}
-        <svg className="absolute bottom-10 left-10 w-64 h-64" viewBox="0 0 200 200">
-          <path d="M0 200 L100 100 L0 100 Z M0 200 L80 180 M0 180 L60 160 M0 160 L40 140 M0 140 L20 120" 
-                stroke="white" strokeWidth="1.5" fill="none"/>
-          <circle cx="100" cy="100" r="4" fill="white"/>
+        <svg
+          className="absolute bottom-10 left-10 w-64 h-64"
+          viewBox="0 0 200 200"
+        >
+          <path
+            d="M0 200 L100 100 L0 100 Z M0 200 L80 180 M0 180 L60 160 M0 160 L40 140 M0 140 L20 120"
+            stroke="white"
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <circle cx="100" cy="100" r="4" fill="white" />
         </svg>
       </div>
 
@@ -212,7 +394,7 @@ export default function MedTwinDashboard() {
       <header className="sticky top-0 z-40 border-b border-blue-900/30 bg-black/60 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <motion.div 
+            <motion.div
               className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-red-900 grid place-items-center shadow-lg shadow-blue-900/50"
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
@@ -225,7 +407,10 @@ export default function MedTwinDashboard() {
             </motion.div>
             <div>
               <Link href="/" passHref>
-                <button className="font-semibold leading-tight text-white" style={{ all: "unset", cursor: "pointer" }}>
+                <button
+                  className="font-semibold leading-tight text-white"
+                  style={{ all: "unset", cursor: "pointer" }}
+                >
                   Nomi.ai
                 </button>
               </Link>
@@ -235,16 +420,18 @@ export default function MedTwinDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Streak Indicator */}
             <div className="flex items-center gap-1.5 ml-4">
               <Flame size={18} className="text-orange-400" />
               <span className="text-lg font-bold text-orange-400">7</span>
             </div>
 
-            <motion.button 
-              onClick={() => router.push('/profile')}
+            <motion.button
+              onClick={() => router.push("/profile")}
               className="rounded-full bg-gradient-to-r from-purple-900/50 to-blue-900/50 hover:from-purple-800 hover:to-blue-800 border border-blue-900/50 w-11 h-11 flex items-center justify-center transition-all duration-300"
-              whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(30, 58, 138, 0.5)" }}
+              whileHover={{
+                scale: 1.08,
+                boxShadow: "0 0 24px rgba(30, 58, 138, 0.5)",
+              }}
               whileTap={{ scale: 0.95 }}
             >
               <User size={20} />
@@ -260,7 +447,8 @@ export default function MedTwinDashboard() {
           {/* WATER TRACKER */}
           <Panel title="Water Tracker" icon={<GlassWater size={16} />}>
             <div className="text-sm mb-3">
-              <span className="font-semibold text-blue-400">{waterCount}</span> / 8 glasses today
+              <span className="font-semibold text-blue-400">{waterCount}</span>{" "}
+              / 8 glasses today
             </div>
 
             <div className="grid grid-cols-4 gap-2 justify-items-center mb-3">
@@ -281,15 +469,18 @@ export default function MedTwinDashboard() {
                     whileTap={{ scale: 0.85 }}
                     className="relative"
                   >
-                    <svg width="32" height="40" viewBox="0 0 32 40" className="overflow-visible">
+                    <svg
+                      width="32"
+                      height="40"
+                      viewBox="0 0 32 40"
+                      className="overflow-visible"
+                    >
                       <defs>
                         <clipPath id={`glassClip-${i}`}>
-                          {/* Glass shape - trapezoid */}
                           <path d="M 8 2 L 24 2 L 26 38 L 6 38 Z" />
                         </clipPath>
                       </defs>
-                      
-                      {/* Water fill with clip path */}
+
                       <g clipPath={`url(#glassClip-${i})`}>
                         <motion.rect
                           x="0"
@@ -302,19 +493,23 @@ export default function MedTwinDashboard() {
                           transition={{ duration: 0.4, ease: "easeOut" }}
                         />
                       </g>
-                      
-                      {/* Glass outline */}
-                      <path 
-                        d="M 8 2 L 24 2 L 26 38 L 6 38 Z" 
-                        fill="none" 
-                        stroke={isFilled ? "white" : "#4b5563"} 
+
+                      <path
+                        d="M 8 2 L 24 2 L 26 38 L 6 38 Z"
+                        fill="none"
+                        stroke={isFilled ? "white" : "#4b5563"}
                         strokeWidth="2"
                         className="transition-colors duration-300"
                       />
-                      
-                      {/* Water gradient definition */}
+
                       <defs>
-                        <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <linearGradient
+                          id="waterGradient"
+                          x1="0%"
+                          y1="0%"
+                          x2="0%"
+                          y2="100%"
+                        >
                           <stop offset="0%" stopColor="#60a5fa" />
                           <stop offset="100%" stopColor="#3b82f6" />
                         </linearGradient>
@@ -337,48 +532,48 @@ export default function MedTwinDashboard() {
           </Panel>
 
           {/* WATER GRAPH */}
-            <Panel title="Water Intake (Past 5 Days)" icon={<Activity size={16} />}>
+          <Panel
+            title="Water Intake (Past 5 Days)"
+            icon={<Activity size={16} />}
+          >
             <div className="flex justify-center">
-                <ResponsiveContainer width="90%" height={150}>
+              <ResponsiveContainer width="90%" height={150}>
                 <AreaChart
-                    data={initialWaterData}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  data={initialWaterData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                 >
-                    <XAxis
+                  <XAxis
                     dataKey="day"
                     tick={{ fill: "#9ca3af", fontSize: 12 }}
                     axisLine={{ stroke: "#374151" }}
-                    />
-                    <YAxis
+                  />
+                  <YAxis
                     tick={{ fill: "#9ca3af", fontSize: 12 }}
                     axisLine={{ stroke: "#374151" }}
                     width={25}
                     domain={[0, 8]}
-                    />
-                    <Tooltip
+                  />
+                  <Tooltip
                     contentStyle={{
-                        backgroundColor: "#ffffff",
-                        color: "#111111", // darker text
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        fontSize: "12px",
+                      backgroundColor: "#ffffff",
+                      color: "#111111",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
+                      fontSize: "12px",
                     }}
-                    labelStyle={{
-                        color: "#111111", // darker label (the day)
-                        fontWeight: 600,
-                    }}
-                    />
-                    <Area
+                    labelStyle={{ color: "#111111", fontWeight: 600 }}
+                  />
+                  <Area
                     type="monotone"
                     dataKey="cups"
                     stroke="#3b82f6"
                     fill="#3b82f6"
                     fillOpacity={0.25}
-                    />
+                  />
                 </AreaChart>
-                </ResponsiveContainer>
+              </ResponsiveContainer>
             </div>
-            </Panel>
+          </Panel>
 
           {/* SLEEP TRACKER */}
           <Panel title="Sleep Tracker" icon={<Moon size={16} />}>
@@ -386,20 +581,17 @@ export default function MedTwinDashboard() {
               <div className="text-[10px] text-zinc-400 text-center mb-1">
                 Hours slept last night
               </div>
-              
-              {/* Apple-style 3-Column Time Picker Wheel */}
+
               <div className="relative w-full max-w-[350px]">
-                {/* Selection highlight bar */}
                 <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-10 bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-y border-blue-500/30 pointer-events-none z-10 rounded-md shadow-lg shadow-blue-900/20" />
-                
-                {/* Gradient overlays for fade effect */}
                 <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#0c0f14] via-[#0c0f14]/80 to-transparent pointer-events-none z-20" />
                 <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#0c0f14] via-[#0c0f14]/80 to-transparent pointer-events-none z-20" />
-                
-                {/* 3 Column Layout */}
+
                 <div className="flex items-center justify-center">
-                  {/* Hours Column */}
-                  <div className="relative h-32 w-16 overflow-y-auto scrollbar-hide" onScroll={handleHoursScroll}>
+                  <div
+                    className="relative h-32 w-16 overflow-y-auto scrollbar-hide"
+                    onScroll={handleHoursScroll}
+                  >
                     <div className="py-11">
                       {Array.from({ length: 13 }).map((_, i) => {
                         const isSelected = i === sleepHoursWhole;
@@ -424,14 +616,15 @@ export default function MedTwinDashboard() {
                       })}
                     </div>
                   </div>
-                  
-                  {/* Separator Label */}
+
                   <div className="text-white text-sm font-medium px-1 relative z-30">
                     hours
                   </div>
-                  
-                  {/* Minutes Column */}
-                  <div className="relative h-32 w-16 overflow-y-auto scrollbar-hide" onScroll={handleMinutesScroll}>
+
+                  <div
+                    className="relative h-32 w-16 overflow-y-auto scrollbar-hide"
+                    onScroll={handleMinutesScroll}
+                  >
                     <div className="py-11">
                       {[0, 15, 30, 45].map((min) => {
                         const isSelected = min === sleepMinutes;
@@ -450,35 +643,37 @@ export default function MedTwinDashboard() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            {min.toString().padStart(2, '0')}
+                            {min.toString().padStart(2, "0")}
                           </motion.button>
                         );
                       })}
                     </div>
                   </div>
-                  
-                  {/* Minutes Label */}
+
                   <div className="text-white text-sm font-medium px-1 relative z-30">
                     min
                   </div>
                 </div>
               </div>
-              
-              {/* Log Button */}
+
               <motion.button
                 onClick={() => {
-                  // TODO: Log sleep data
-                  alert(`Logged: ${sleepHoursWhole}h ${sleepMinutes}m of sleep`);
+                  alert(
+                    `Logged: ${sleepHoursWhole}h ${sleepMinutes}m of sleep`
+                  );
                 }}
                 className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-900/30 hover:bg-blue-900/50 border border-blue-900/50 text-blue-400 text-xs font-medium transition-all"
-                whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(59, 130, 246, 0.3)" }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 0 15px rgba(59, 130, 246, 0.3)",
+                }}
                 whileTap={{ scale: 0.95 }}
               >
                 <span className="text-sm">+</span>
                 <span>Log Sleep</span>
               </motion.button>
             </div>
-            
+
             <style jsx>{`
               .scrollbar-hide::-webkit-scrollbar {
                 display: none;
@@ -491,53 +686,57 @@ export default function MedTwinDashboard() {
           </Panel>
 
           {/* SLEEP GRAPH */}
-            <Panel title="Sleep Duration (Past 5 Days)" icon={<Activity size={16} />}>
+          <Panel
+            title="Sleep Duration (Past 5 Days)"
+            icon={<Activity size={16} />}
+          >
             <div className="flex justify-center">
-                <ResponsiveContainer width="90%" height={150}>
+              <ResponsiveContainer width="90%" height={150}>
                 <LineChart
-                    data={initialSleepData}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  data={initialSleepData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                 >
-                    <XAxis
+                  <XAxis
                     dataKey="day"
                     tick={{ fill: "#9ca3af", fontSize: 12 }}
                     axisLine={{ stroke: "#374151" }}
-                    />
-                    <YAxis
+                  />
+                  <YAxis
                     tick={{ fill: "#9ca3af", fontSize: 12 }}
                     axisLine={{ stroke: "#374151" }}
                     width={25}
                     domain={[5, 9]}
-                    />
-                    <Tooltip
+                  />
+                  <Tooltip
                     contentStyle={{
-                        backgroundColor: "#ffffff",
-                        color: "#111111", // darker text
-                        borderRadius: "8px",
-                        border: "1px solid #e5e7eb",
-                        fontSize: "12px",
+                      backgroundColor: "#ffffff",
+                      color: "#111111",
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
+                      fontSize: "12px",
                     }}
-                    labelStyle={{
-                        color: "#111111", // darker label (the day)
-                        fontWeight: 600,
-                    }}
-                    />
-                    <Line
+                    labelStyle={{ color: "#111111", fontWeight: 600 }}
+                  />
+                  <Line
                     type="monotone"
                     dataKey="hrs"
                     stroke="#38bdf8"
                     strokeWidth={2}
                     dot={{ fill: "#38bdf8" }}
-                    />
+                  />
                 </LineChart>
-                </ResponsiveContainer>
+              </ResponsiveContainer>
             </div>
-            </Panel>
+          </Panel>
         </div>
 
         {/* CENTER COLUMN */}
         <div className="col-span-12 md:col-span-6 flex flex-col gap-5 items-center">
-          <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full">
+          <Panel
+            title="3D Avatar"
+            icon={<Brain size={16} />}
+            className="w-full"
+          >
             <div className="aspect-[3/4] rounded-xl overflow-hidden">
               <div className="w-full h-full">
                 <AvatarDashboard />
@@ -551,10 +750,17 @@ export default function MedTwinDashboard() {
           <Panel title="Doc AI" icon={<Stethoscope size={16} />}>
             <div className="bg-black/50 border border-blue-900/30 rounded-xl p-3 h-32 overflow-auto text-sm space-y-2">
               <div>
-                <b className="text-blue-400">You:</b> <span className="text-gray-300">Why am I feeling tired lately?</span>
+                <b className="text-blue-400">You:</b>{" "}
+                <span className="text-gray-300">
+                  Why am I feeling tired lately?
+                </span>
               </div>
               <div>
-                <b className="text-red-400">AI:</b> <span className="text-gray-300">Your sleep dropped below 7h average. Try consistent bedtime and hydration tracking.</span>
+                <b className="text-red-400">AI:</b>{" "}
+                <span className="text-gray-300">
+                  Your sleep dropped below 7h average. Try consistent bedtime
+                  and hydration tracking.
+                </span>
               </div>
             </div>
             <div className="mt-2 flex gap-2">
@@ -562,7 +768,7 @@ export default function MedTwinDashboard() {
                 placeholder="Ask your AI doctor..."
                 className="flex-1 rounded-lg bg-black/50 border border-blue-900/30 px-3 py-2 text-sm placeholder:text-gray-500 text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
               />
-              <motion.button 
+              <motion.button
                 className="rounded-lg bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/30 px-3 py-2 text-sm font-semibold"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -573,9 +779,8 @@ export default function MedTwinDashboard() {
           </Panel>
 
           <Panel title="Monthly Check-ins" icon={<CalendarCheck2 size={16} />}>
-            {/* Streak and Points - Compact */}
             <div className="grid grid-cols-2 gap-2 mb-2">
-              <motion.div 
+              <motion.div
                 className="flex items-center justify-center gap-1 bg-gradient-to-br from-orange-900/20 to-red-900/20 border border-orange-900/30 rounded-md px-2 py-1"
                 whileHover={{ scale: 1.02 }}
               >
@@ -583,8 +788,8 @@ export default function MedTwinDashboard() {
                 <div className="text-xs font-bold text-orange-400">7</div>
                 <div className="text-[9px] text-gray-400">streak</div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="flex items-center justify-center gap-1 bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-900/30 rounded-md px-2 py-1"
                 whileHover={{ scale: 1.02 }}
               >
@@ -593,15 +798,19 @@ export default function MedTwinDashboard() {
                 <div className="text-[9px] text-gray-400">pts</div>
               </motion.div>
             </div>
-            
+
             <div className="flex items-center justify-between mb-2 text-sm">
               <div>
-                <span className="font-semibold">{checkedCount}</span> / {daysInMonth ?? "--"} days checked in
+                <span className="font-semibold">{checkedCount}</span> /{" "}
+                {daysInMonth ?? "--"} days checked in
               </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-[10px]">
-               {Array.from({ length: firstWeekday ?? 0 }).map((_, i) => (
-                <div key={`b-${i}`} className="h-7 rounded bg-gray-900/50 opacity-30 border border-blue-900/20" />
+              {Array.from({ length: firstWeekday ?? 0 }).map((_, i) => (
+                <div
+                  key={`b-${i}`}
+                  className="h-7 rounded bg-gray-900/50 opacity-30 border border-blue-900/20"
+                />
               ))}
               {checkins.map((d, i) => (
                 <motion.div
@@ -610,8 +819,8 @@ export default function MedTwinDashboard() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.01 }}
                   className={`h-7 rounded grid place-items-center border transition-all duration-300 ${
-                    d.ok 
-                      ? "bg-gradient-to-br from-blue-900/40 to-red-900/40 border-blue-900/50 text-blue-300 hover:border-red-900/50" 
+                    d.ok
+                      ? "bg-gradient-to-br from-blue-900/40 to-red-900/40 border-blue-900/50 text-blue-300 hover:border-red-900/50"
                       : "bg-gray-900/50 border-blue-900/20 text-gray-400 hover:border-blue-900/40"
                   }`}
                 >
@@ -633,12 +842,10 @@ export default function MedTwinDashboard() {
                 transition={{ duration: 1, ease: "easeOut" }}
               />
             </div>
-            
-            {/* Request Refill Button */}
+
             <motion.button
               onClick={() => {
-                // TODO: Implement refill request logic
-                alert('Refill request sent! Your pharmacy will be notified.');
+                alert("Refill request sent! Your pharmacy will be notified.");
               }}
               className="w-full mt-4 rounded-xl bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/30 px-4 py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
               whileHover={{ scale: 1.02 }}
@@ -651,15 +858,90 @@ export default function MedTwinDashboard() {
 
           <Panel title="AI Recommendations" icon={<BellRing size={16} />}>
             <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
-              <li className="hover:text-blue-400 transition-colors duration-300">Drink 8 glasses of water daily</li>
-              <li className="hover:text-blue-400 transition-colors duration-300">Sleep at least 7 hours tonight</li>
-              <li className="hover:text-blue-400 transition-colors duration-300">Take your meds with food</li>
+              <li className="hover:text-blue-400 transition-colors duration-300">
+                Drink 8 glasses of water daily
+              </li>
+              <li className="hover:text-blue-400 transition-colors duration-300">
+                Sleep at least 7 hours tonight
+              </li>
+              <li className="hover:text-blue-400 transition-colors duration-300">
+                Take your meds with food
+              </li>
             </ul>
+          </Panel>
+
+          {/* NEW: Upload PDF (analyze + DB insert + alert) */}
+          <Panel title="Upload PDF" icon={<Stethoscope size={16} />}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3 bg-black/50 border border-dashed border-blue-900/40 hover:border-red-900/50 rounded-xl px-4 py-4 transition-all duration-300">
+                <div className="text-sm text-gray-300">
+                  {dashUploads.length ? (
+                    <span className="text-emerald-400 font-medium">
+                      {dashUploads.length} uploaded
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Upload medical PDFs</span>
+                  )}
+                </div>
+
+                <label className="relative cursor-pointer bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 rounded-xl text-sm font-semibold shadow-lg hover:shadow-blue-900/50 transition-all duration-300">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    multiple
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={handleDashPdfUpload}
+                  />
+                  <span className="inline-flex items-center gap-2">
+                    <Sparkles size={14} />
+                    Upload
+                  </span>
+                </label>
+              </div>
+
+              {dashIsAnalyzing && (
+                <div className="flex items-center gap-2 text-blue-300 text-sm">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                    />
+                  </svg>
+                  <span>Analyzing…</span>
+                </div>
+              )}
+
+              {dashUploads.length > 0 && (
+                <div className="rounded-lg border border-blue-900/30 bg-black/40 p-3">
+                  <div className="text-xs text-gray-400 mb-2">
+                    Recent uploads
+                  </div>
+                  <ul className="text-xs text-gray-300 space-y-1 max-h-28 overflow-auto">
+                    {dashUploads.map((n) => (
+                      <li key={n} className="truncate">
+                        • {n}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </Panel>
         </div>
       </main>
 
-      <motion.footer 
+      <motion.footer
         className="py-8 text-center text-xs text-gray-500 border-t border-blue-900/20 relative z-10"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
