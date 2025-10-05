@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import { supabase } from '@/lib/supabase';
 
+// Force dynamic rendering to avoid cookies() warnings in Next.js 15
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     // Check if Supabase is configured
