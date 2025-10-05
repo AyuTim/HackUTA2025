@@ -1,5 +1,5 @@
 import Profile from "@/components/Profile";
 
-export default function ProfileViewPage() {
+export default function ProfilePage() {
   return <Profile />;
 }

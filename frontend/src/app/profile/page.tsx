@@ -1,5 +1,5 @@
-import ProfileView from "../../components/ProfileView";
+import ProfileCreation from "../../components/ProfileCreation";
 
-export default function ProfilePage() {
-  return <ProfileView />;
+export default function ProfileCreationPage() {
+  return <ProfileCreation />;
 }
