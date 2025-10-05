@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
@@ -130,6 +130,124 @@ const AvatarDashboard = dynamic(() => import("./AvatarDashBoard"), {
 });
 
 /* -------------------------
+   Small Doc bubble (in-panel)
+   - Morphing SVG blob (time-based, smooth)
+   - Click to open full-screen Doc
+------------------------- */
+
+/* -------------------------
+   Doc: Full-screen overlay
+------------------------- */
+function DocOverlay({
+  open,
+  onClose,
+  src,
+}: {
+  open: boolean;
+  onClose: () => void;
+  src: string;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[1000]">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-md"
+        onClick={onClose}
+      />
+      <div className="absolute right-4 top-4 z-[1001]">
+        <button
+          onClick={onClose}
+          className="rounded-full bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 text-sm ring-1 ring-white/15"
+        >
+          Close ✕
+        </button>
+      </div>
+      <iframe
+        title="Doc"
+        src={src}
+        className="absolute inset-0 w-full h-full border-0"
+        allow="microphone; autoplay"
+      />
+    </div>
+  );
+}
+
+function DocBubbleMini({ onClick }: { onClick: () => void }) {
+  const pathRef = useRef<SVGPathElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let start = performance.now();
+
+    const makePath = (level: number, t: number) => {
+      const lobes = 3;
+      const base = 0.78;
+      const amp = 0.1 * level; // gentle morph
+      let d = "";
+      for (let i = 0; i <= 360; i += 6) {
+        const th = (i * Math.PI) / 180;
+        const r =
+          base +
+          amp * Math.sin(lobes * th + t * 1.8) +
+          0.05 * Math.sin(2 * th + t * 0.7);
+        const x = r * Math.cos(th);
+        const y = r * Math.sin(th);
+        d += (i === 0 ? "M" : "L") + x.toFixed(4) + " " + y.toFixed(4) + " ";
+      }
+      return d + "Z";
+    };
+
+    const tick = (now: number) => {
+      const t = (now - start) / 1000;
+      // Oscillate "level" smoothly (0.6–1.0) to simulate breath/pulse
+      const level = 0.8 + 0.2 * Math.sin(t * 1.2);
+      if (pathRef.current) {
+        pathRef.current.setAttribute("d", makePath(level, t));
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Open Doc"
+      className="group relative grid place-items-center w-full"
+      style={{ minHeight: 180 }}
+    >
+      <svg
+        viewBox="-1 -1 2 2"
+        className="drop-shadow-[0_0_30px_rgba(30,58,138,0.45)]"
+        style={{ width: 180, height: 180 }}
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="docMiniGrad" x1="-1" y1="-1" x2="1" y2="">
+            <stop offset="0.3" stopColor="#9b3232ff" />
+            <stop offset="1" stopColor="#31558fff" />
+          </linearGradient>
+        </defs>
+        <path ref={pathRef} fill="url(#docMiniGrad)"></path>
+      </svg>
+
+      {/* subtle halo */}
+      <span
+        className="pointer-events-none absolute w-[220px] h-[220px] rounded-full blur-3xl opacity-40 group-hover:opacity-60 transition-opacity"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(96,165,250,.45), rgba(15,23,42,0))",
+        }}
+      />
+    </button>
+  );
+}
+
+/* -------------------------
    Mock Data
 ------------------------- */
 const initialWaterData = [
@@ -215,6 +333,15 @@ export default function MedTwinDashboard() {
 
   const [sleepHoursWhole, setSleepHoursWhole] = useState(7);
   const [sleepMinutes, setSleepMinutes] = useState(0);
+
+  // Doc overlay state
+  const [docOpen, setDocOpen] = useState(false);
+  // const DOC_URL =
+  //   process.env.NEXT_PUBLIC_DOC_URL || "http://localhost:5174/voice";
+  const host =
+    typeof window !== "undefined" ? window.location.hostname : "localhost";
+  const DOC_URL =
+    process.env.NEXT_PUBLIC_DOC_URL || `http://${host}:5174/voice`;
 
   const handleHoursScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
@@ -757,34 +884,13 @@ export default function MedTwinDashboard() {
 
         {/* RIGHT COLUMN */}
         <div className="col-span-12 md:col-span-3 flex flex-col gap-5">
+          {/* ---- Doc AI panel (REPLACED CONTENT) ---- */}
           <Panel title="Doc AI" icon={<Stethoscope size={16} />}>
-            <div className="bg-black/50 border border-blue-900/30 rounded-xl p-3 h-32 overflow-auto text-sm space-y-2">
-              <div>
-                <b className="text-blue-400">You:</b>{" "}
-                <span className="text-gray-300">
-                  Why am I feeling tired lately?
-                </span>
+            <div className="flex flex-col items-center justify-center py-2">
+              <div className="text-xs text-gray-400 mb-1">
+                Tap the bubble to open Doc
               </div>
-              <div>
-                <b className="text-red-400">AI:</b>{" "}
-                <span className="text-gray-300">
-                  Your sleep dropped below 7h average. Try consistent bedtime
-                  and hydration tracking.
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 flex gap-2">
-              <input
-                placeholder="Ask your AI doctor..."
-                className="flex-1 rounded-lg bg-black/50 border border-blue-900/30 px-3 py-2 text-sm placeholder:text-gray-500 text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-              />
-              <motion.button
-                className="rounded-lg bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/30 px-3 py-2 text-sm font-semibold"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Send
-              </motion.button>
+              <DocBubbleMini onClick={() => setDocOpen(true)} />
             </div>
           </Panel>
 
@@ -973,6 +1079,12 @@ export default function MedTwinDashboard() {
           </motion.div>
         </div>
       </motion.footer>
+      {/* Full-screen Doc overlay */}
+      <DocOverlay
+        open={docOpen}
+        onClose={() => setDocOpen(false)}
+        src={DOC_URL}
+      />
     </div>
   );
 }
