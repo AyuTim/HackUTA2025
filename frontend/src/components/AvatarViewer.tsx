@@ -37,20 +37,21 @@ const FINE_RULES: Array<{ test: RegExp; part: string; bucket: PartBucket }> = [
   { test: /(neck|throat)/, part: "Neck", bucket: "Neck" },
 
   // torso / midline
-  { test: /(upperchest|chest|pec|rib|torso|abdomen|stomach|body)/, part: "Chest", bucket: "Chest" },
+  { test: /top/i, part: "Chest", bucket: "Chest" },
+  { test: /(Wolf3D_Outfit_Top|Top|top|upperchest|chest|pec|rib|torso|abdomen|stomach|body)/, part: "Chest", bucket: "Chest" },
   { test: /(spine3|spine2)/, part: "Upper Back", bucket: "Back" },
   { test: /(spine1|spine\b)/, part: "Mid Back", bucket: "Back" },
   { test: /(hips|pelvis|hip)/, part: "Hips/Pelvis", bucket: "Hips" },
 
   // arms
-  { test: /(clavicle|shoulder|scapula)/, part: "Shoulder", bucket: "Arms" },
+  { test: /(body|clavicle|shoulder|scapula)/, part: "Shoulder", bucket: "Arms" },
   { test: /(upperarm|uparm|humerus|(?<!fore)arm(?!ature))/ , part: "Upper Arm", bucket: "Arms" },
   { test: /(forearm|radius|ulna|elbow)/, part: "Forearm", bucket: "Arms" },
   { test: /(hand|wrist|palm|finger|thumb)/, part: "Hand", bucket: "Hands" },
 
   // legs
   { test: /(upleg|upperleg|thigh|femur)/, part: "Thigh", bucket: "Legs" },
-  { test: /(leg(?!end)|knee|calf|shin|tibia|fibula)/, part: "Shin/Calf", bucket: "Legs" },
+  { test: /(leg(?!end)|leg|LeftLeg|RightUpLeg|LeftUpLeg|knee|calf|shin|tibia|fibula)/, part: "Shin/Calf", bucket: "Legs" },
   { test: /(foot|feet|toe|ankle|ball|heel)/, part: "Foot", bucket: "Feet" },
 ];
 
