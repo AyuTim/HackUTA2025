@@ -11,14 +11,45 @@ import { runReasoner } from "./reasoner.js";
 
 const ELEVEN_KEY = process.env.ELEVENLABS_API_KEY;
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
-const PORT = Number(process.env.DOC_TTS_PORT || 5173);
+const PORT = Number(process.env.DOC_TTS_PORT || 5174); // ← changed from 5173 to 5174 (integration)
 
+// state for UI
 let serverStarted = false;
 let pageOpened = false;
 const clients = new Set();
 
+// const app = express();
+// app.use(express.json());
+
 const app = express();
 app.use(express.json());
+
+// ✅ allow embedding + basic CORS so iframe at :3000 can load :5174
+app.use((req, res, next) => {
+  // allow the Next app to frame this page
+  res.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors 'self' http://localhost:3000 http://127.0.0.1:3000;"
+  );
+  // older header some browsers still look at
+  res.setHeader("X-Frame-Options", "ALLOWALL");
+
+  // optional: CORS (not strictly needed for iframes, but nice to have)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+// --- Integration-only headers (allow iframe embedding from same origin) ---
+app.use((req, res, next) => {
+  // If you serve Next at http://localhost:3000, the iframe src will be http://localhost:5174/voice
+  // SAMEORIGIN allows embedding when host is the same machine (use more specific CSP later if needed).
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
 
 // ---------- UI ----------
 app.get("/voice", (_req, res) => {
@@ -114,7 +145,6 @@ function _dedupeSimilarSentences(s = "") {
       const kt = _tokens(k);
       const kn = _norm(k);
       const sim = _jaccard(pt, kt);
-      // near-duplicate if very similar tokens OR one contains the other
       if (sim >= 0.70 || kn.includes(pn) || pn.includes(kn)) { dup = true; break; }
     }
     if (!dup) kept.push(p);
@@ -241,8 +271,8 @@ const VOICE_HTML = `<!doctype html>
 <style>
   :root {
     font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
-    --blue-900: #7fa5e4ff; /* Doc bubble */
-    --red-900:  #b65a5aff; /* You bubble */
+    --blue-900: #1d3a69ff; /* Doc bubble */
+    --red-900:  #8d1d1dff; /* You bubble */
   }
   body { margin:0; background:#0b0c10; color:#e9eef3; display:grid; place-items:center; min-height:100dvh; }
   .card { position:relative; width:min(560px,92vw); background:#11151c; border:1px solid #222b36; border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
@@ -479,7 +509,7 @@ const VOICE_HTML = `<!doctype html>
     return kept.join(" ");
   }
 
-  // Dedupe last-sent (prevent double sends) + FIX: replace draft text with final full text
+  // Dedupe last-sent + ensure final text replaces draft
   let lastSent = "";
   let lastSentAt = 0;
   async function sendToDoc(text) {
@@ -491,7 +521,7 @@ const VOICE_HTML = `<!doctype html>
 
     const d = document.getElementById('draftLine');
     if (d) {
-      d.textContent = t;              // <<< ensure full sentence is saved
+      d.textContent = t;
       d.classList.remove('draft');
       d.id = '';
     } else {
@@ -549,7 +579,7 @@ const VOICE_HTML = `<!doctype html>
   }
   const BARGE_THRESHOLD = 0.09;
   const BARGE_MIN_MS = 140;
-  const OUT_ECHO_GUARD = 1.35; // mic must be ~35% louder than output
+  const OUT_ECHO_GUARD = 1.35;
   let bargeStartAt = null;
   let t0 = performance.now();
   function animateBlob(){
@@ -590,7 +620,7 @@ const VOICE_HTML = `<!doctype html>
     listenBtn.setAttribute('aria-pressed', String(active));
     listenBtn.title = active ? 'Stop listening' : 'Start listening';
     iconPause.style.display = active ? 'none' : '';
-    iconPlay.style.display  = active ? '' : 'none';
+    iconPlay   .style.display = active ? '' : 'none';
   }
 
   function pauseRecognitionForTTS() {
@@ -617,11 +647,11 @@ const VOICE_HTML = `<!doctype html>
     srSquelchUntil = performance.now() + SR_SQUELCH_MS;
 
     rec.onresult = (ev) => {
-      if (performance.now() < ttsCooldownUntil) return; // after TTS tail
+      if (performance.now() < ttsCooldownUntil) return;
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const r = ev.results[i];
         const txt = r[0]?.transcript || '';
-        if (performance.now() < srSquelchUntil) continue; // ignore early frames
+        if (performance.now() < srSquelchUntil) continue;
 
         if (r.isFinal) {
           finals.push(txt.trim());
