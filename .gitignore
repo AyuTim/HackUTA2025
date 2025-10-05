@@ -24,11 +24,9 @@ pnpm-debug.log*
 
 # TypeScript build info
 *.tsbuildinfo
-
-# Env files (keep an example)
+.docenv
 .env
 .env.*
-.docenv
 !.env.example
 # Next convention
 .env.local
@@ -63,6 +61,7 @@ build/
 dist/
 .eggs/
 *.egg-info/
+.env
 
 # Jupyter & misc
 .ipynb_checkpoints/

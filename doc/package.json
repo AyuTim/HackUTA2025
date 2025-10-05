@@ -1,0 +1,23 @@
+{
+  "name": "doc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "doc": "node src/doc_chat.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "voice:claude": "node src/tts_browser.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "## Overview **Doc** is an AI-powered medical reasoning system that connects directly with a user’s **digital twin (Nomi)** to create a continuously updating model of health.   It ingests clinical documents, lifestyle metrics, and contextual data to perform structured understanding, reasoning, and feedback generation — weaving a complete *web of health.*",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "openai": "^6.1.0",
+    "zod": "^3.25.76"
+  },
+  "type": "module"
+}
