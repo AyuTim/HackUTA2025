@@ -221,7 +221,7 @@ export default function MedTwinDashboard() {
               whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
               whileTap={{ scale: 0.95 }}
             >
-              <User size={14} /> Edit Profile
+              <User size={14} /> View Profile
             </motion.button>
             <motion.button 
               className="rounded-xl bg-blue-900/50 hover:bg-blue-800/50 border border-blue-900/50 px-3 py-2 text-sm flex items-center gap-2 transition-all duration-300"
