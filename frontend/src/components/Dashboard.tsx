@@ -15,6 +15,7 @@ import {
   Moon,
   GlassWater,
 } from "lucide-react";
+import AvatarDashboard from "./AvatarDashBoard";
 import {
   LineChart,
   Line,
@@ -275,8 +276,10 @@ export default function MedTwinDashboard() {
         {/* CENTER COLUMN */}
         <div className="col-span-12 md:col-span-6 flex flex-col gap-5 items-center">
           <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full">
-            <div className="aspect-[3/4] rounded-xl bg-[linear-gradient(120deg,#151a22,#0f141a)] grid place-items-center text-zinc-400 text-xs border border-white/10">
-              Three.js canvas placeholder
+            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-[linear-gradient(120deg,#151a22,#0f141a)] border border-white/10">
+              <div className="w-full h-full">
+                <AvatarDashboard />
+              </div>
             </div>
           </Panel>
         </div>
