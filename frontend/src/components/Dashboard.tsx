@@ -46,17 +46,7 @@ const initialSleepData = [
   { day: "Fri", hrs: 6.8 },
 ];
 
-const now = new Date();
-const YEAR = now.getFullYear();
-const MONTH = now.getMonth();
-const DAYS_IN_MONTH = new Date(YEAR, MONTH + 1, 0).getDate();
-const FIRST_WEEKDAY = new Date(YEAR, MONTH, 1).getDay();
-const TODAY = now.getDate();
-const checkins = Array.from({ length: DAYS_IN_MONTH }, (_, i) => ({
-  day: i + 1,
-  ok: Math.random() > 0.4 || i + 1 === TODAY,
-}));
-const checkedCount = checkins.filter((d) => d.ok).length;
+// Date-dependent values moved into the component to avoid SSR/client mismatch
 
 /* -------------------------
    Panel Component
@@ -89,6 +79,28 @@ export default function MedTwinDashboard() {
   const [waterCount, setWaterCount] = useState(0);
   const [filledCups, setFilledCups] = useState<boolean[]>(Array(8).fill(false));
   const [sleepHours, setSleepHours] = useState(7.0);
+  // client-only date/checkin state to avoid hydration mismatch
+  const [daysInMonth, setDaysInMonth] = useState<number | null>(null);
+  const [firstWeekday, setFirstWeekday] = useState<number | null>(null);
+  const [checkins, setCheckins] = useState<Array<{ day: number; ok: boolean }>>([]);
+  const [checkedCount, setCheckedCount] = useState<number>(0);
+
+  React.useEffect(() => {
+    const now = new Date();
+    const YEAR = now.getFullYear();
+    const MONTH = now.getMonth();
+    const DAYS_IN_MONTH = new Date(YEAR, MONTH + 1, 0).getDate();
+    const FIRST_WEEKDAY = new Date(YEAR, MONTH, 1).getDay();
+    const TODAY = now.getDate();
+    const generated = Array.from({ length: DAYS_IN_MONTH }, (_, i) => ({
+      day: i + 1,
+      ok: Math.random() > 0.4 || i + 1 === TODAY,
+    }));
+    setCheckins(generated);
+    setDaysInMonth(DAYS_IN_MONTH);
+    setFirstWeekday(FIRST_WEEKDAY);
+    setCheckedCount(generated.filter((d) => d.ok).length);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0b0f14] text-zinc-100">
@@ -309,23 +321,32 @@ export default function MedTwinDashboard() {
           <Panel title="Monthly Check-ins" icon={<CalendarCheck2 size={16} />}>
             <div className="flex items-center justify-between mb-2 text-sm">
               <div>
-                <span className="font-semibold">{checkedCount}</span> / {DAYS_IN_MONTH} days checked in
+                <span className="font-semibold">{checkedCount}</span> / {daysInMonth ?? "--"} days checked in
               </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-[10px]">
-              {Array.from({ length: FIRST_WEEKDAY }).map((_, i) => (
-                <div key={`b-${i}`} className="h-7 rounded bg-white/5 opacity-30" />
-              ))}
-              {checkins.map((d, i) => (
-                <div
-                  key={i}
-                  className={`h-7 rounded grid place-items-center border border-white/10 ${
-                    d.ok ? "bg-blue-500/20 text-blue-300" : "bg-white/5 text-zinc-300"
-                  }`}
-                >
-                  {d.day}
-                </div>
-              ))}
+              {firstWeekday !== null && daysInMonth !== null ? (
+                <>
+                  {Array.from({ length: firstWeekday }).map((_, i) => (
+                    <div key={`b-${i}`} className="h-7 rounded bg-white/5 opacity-30" />
+                  ))}
+                  {checkins.map((d, i) => (
+                    <div
+                      key={i}
+                      className={`h-7 rounded grid place-items-center border border-white/10 ${
+                        d.ok ? "bg-blue-500/20 text-blue-300" : "bg-white/5 text-zinc-300"
+                      }`}
+                    >
+                      {d.day}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                // server-render friendly placeholder while client computes dates
+                Array.from({ length: 7 }).map((_, i) => (
+                  <div key={`p-${i}`} className="h-7 rounded bg-white/5 opacity-30" />
+                ))
+              )}
             </div>
           </Panel>
 

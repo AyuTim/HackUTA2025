@@ -1,7 +1,7 @@
 "use client";
 
-import React, { Suspense, useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { Suspense, useMemo, useState, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Html } from "@react-three/drei";
 
 type PartName =
@@ -28,6 +28,7 @@ function mapMeshNameToPart(name: string | undefined): PartName {
 function Model({ url, onPartClick }: { url: string; onPartClick: (p: PartName) => void }) {
   // load the glb from public folder (served at /model/...)
   const gltf = useGLTF(url) as any;
+  const groupRef = useRef<any>(null);
 
   // collect mesh children for interactive handlers
   const meshChildren = useMemo(() => {
@@ -38,10 +39,17 @@ function Model({ url, onPartClick }: { url: string; onPartClick: (p: PartName) =
     return list;
   }, [gltf.scene]);
 
+  // slow gentle rotation for dashboard
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += 0.0008; // very slow
+    }
+  });
+
   return (
   <group>
   {/* place the model slightly lower so it sits better in the frame */}
-  <group position={[0, -0.9, 0]}>
+  <group ref={groupRef} position={[0, -0.9, 0]}>
         {/* render original scene as a primitive so transforms are correct */}
         <primitive object={gltf.scene} />
       </group>
