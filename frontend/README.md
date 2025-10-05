@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## 3D Avatar (soumika.glb)
+
+This project includes a demo 3D avatar at `public/model/soumika.glb` and a viewer component at `src/components/AvatarViewer.tsx` which is used in `src/components/MedTwinLanding.tsx`.
+
+To enable the 3D viewer you need to install these packages in the `frontend` folder:
+
+```bash
+npm install three @react-three/fiber @react-three/drei
+```
+
+Notes:
+- The viewer is dynamically imported (no SSR). If you don't install the packages the site will still build but the viewer will fail to render.
+- If you see TypeScript errors about missing types, you can install `@types/three` as a dev dependency.
