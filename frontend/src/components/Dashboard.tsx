@@ -18,6 +18,7 @@ import {
   Flame,
   Award,
 } from "lucide-react";
+import AvatarDashboard from "./AvatarDashBoard";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -49,17 +50,7 @@ const initialSleepData = [
   { day: "Fri", hrs: 6.8 },
 ];
 
-const now = new Date();
-const YEAR = now.getFullYear();
-const MONTH = now.getMonth();
-const DAYS_IN_MONTH = new Date(YEAR, MONTH + 1, 0).getDate();
-const FIRST_WEEKDAY = new Date(YEAR, MONTH, 1).getDay();
-const TODAY = now.getDate();
-const checkins = Array.from({ length: DAYS_IN_MONTH }, (_, i) => ({
-  day: i + 1,
-  ok: Math.random() > 0.4 || i + 1 === TODAY,
-}));
-const checkedCount = checkins.filter((d) => d.ok).length;
+// Date-dependent values moved into the component to avoid SSR/client mismatch
 
 /* -------------------------
    Panel Component
@@ -102,6 +93,28 @@ export default function MedTwinDashboard() {
   const [waterCount, setWaterCount] = useState(0);
   const [filledCups, setFilledCups] = useState<boolean[]>(Array(8).fill(false));
   const [sleepHours, setSleepHours] = useState(7.0);
+  // client-only date/checkin state to avoid hydration mismatch
+  const [daysInMonth, setDaysInMonth] = useState<number | null>(null);
+  const [firstWeekday, setFirstWeekday] = useState<number | null>(null);
+  const [checkins, setCheckins] = useState<Array<{ day: number; ok: boolean }>>([]);
+  const [checkedCount, setCheckedCount] = useState<number>(0);
+
+  React.useEffect(() => {
+    const now = new Date();
+    const YEAR = now.getFullYear();
+    const MONTH = now.getMonth();
+    const DAYS_IN_MONTH = new Date(YEAR, MONTH + 1, 0).getDate();
+    const FIRST_WEEKDAY = new Date(YEAR, MONTH, 1).getDay();
+    const TODAY = now.getDate();
+    const generated = Array.from({ length: DAYS_IN_MONTH }, (_, i) => ({
+      day: i + 1,
+      ok: Math.random() > 0.4 || i + 1 === TODAY,
+    }));
+    setCheckins(generated);
+    setDaysInMonth(DAYS_IN_MONTH);
+    setFirstWeekday(FIRST_WEEKDAY);
+    setCheckedCount(generated.filter((d) => d.ok).length);
+  }, []);
   const [sleepHoursWhole, setSleepHoursWhole] = useState(7);
   const [sleepMinutes, setSleepMinutes] = useState(0);
 
@@ -531,17 +544,11 @@ export default function MedTwinDashboard() {
 
         {/* CENTER COLUMN */}
         <div className="col-span-12 md:col-span-6 flex flex-col gap-5 items-center">
-          <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full bg-transparent border-blue-900/20">
-            <div className="aspect-[3/4] rounded-xl bg-gradient-to-br from-blue-900/10 to-red-900/10 grid place-items-center text-gray-400 text-xs border border-blue-900/20 relative overflow-hidden">
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-blue-900/5 via-red-900/5 to-blue-900/5"
-                animate={{
-                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
-                }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                style={{ backgroundSize: "200% 100%" }}
-              />
-              <span className="relative z-10">Three.js canvas placeholder</span>
+          <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full">
+            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-[linear-gradient(120deg,#151a22,#0f141a)] border border-white/10">
+              <div className="w-full h-full">
+                <AvatarDashboard />
+              </div>
             </div>
           </Panel>
         </div>
@@ -596,7 +603,7 @@ export default function MedTwinDashboard() {
             
             <div className="flex items-center justify-between mb-2 text-sm">
               <div>
-                <span className="font-semibold">{checkedCount}</span> / {DAYS_IN_MONTH} days checked in
+                <span className="font-semibold">{checkedCount}</span> / {daysInMonth ?? "--"} days checked in
               </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-[10px]">

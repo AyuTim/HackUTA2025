@@ -7,16 +7,33 @@ import { OrbitControls, Environment, Html, useGLTF } from "@react-three/drei";
 function Model({ src }: { src: string }) {
   const gltf = useGLTF(src);
   const ref = useRef<any>(null);
+  const bobRef = useRef<{ startY: number | null }>({ startY: null });
   // slow spin
   useFrame(() => {
     if (ref.current) ref.current.rotation.y += 0.0025;
   });
 
   // Lower and center the whole model so it sits nicely in the frame.
+  // Add a subtle up-and-down bobbing motion using a sine wave.
+  useFrame((state) => {
+    if (!ref.current) return;
+    // store original Y on first frame
+    if (bobRef.current.startY === null) {
+      // raise the group's base Y a bit more for a slightly higher framing
+      bobRef.current.startY = -0.4;
+    }
+    const t = state.clock.getElapsedTime();
+    const amplitude = 0.04; // how far up/down the bob goes
+    const speed = 1.2; // speed multiplier for the sine wave
+  const y = (bobRef.current.startY ?? -0.4) + Math.sin(t * speed) * amplitude;
+    // apply position to the group's y component
+    (ref.current.parent ?? ref.current).position.y = y;
+  });
+
   return (
-    // nudged a bit lower for better composition
-    <group position={[0, -0.8, 0]} scale={0.9}>
-      <primitive ref={ref} object={gltf.scene} />
+    // nudged a bit higher for better composition; we'll animate the group's Y
+    <group ref={ref} position={[0, -0.4, 0]} scale={0.9}>
+      <primitive object={gltf.scene} />
     </group>
   );
 }
@@ -36,30 +53,25 @@ export default function AvatarViewer({ src = "/model/soumika.glb" }: { src?: str
   useEffect(() => {
     if (controlsRef.current?.target?.set) {
       // match the lowered model position
-      controlsRef.current.target.set(0, -0.8, 0);
+      // updated to match the slightly raised model position
+      controlsRef.current.target.set(0, -0.3, 0);
       controlsRef.current.update?.();
     }
   }, []);
 
-  return (
+ return (
     <div className="w-full h-full rounded-2xl overflow-hidden">
-      <Canvas 
-        camera={{ position: [0, 1.2, 2.8], fov: 40 }}
-        gl={{ preserveDrawingBuffer: true }}
-      >
-        {/* Darker lighting for a moodier look */}
-        <ambientLight intensity={0.25} />
-        <directionalLight position={[4, 8, 6]} intensity={0.45} />
+      <Canvas camera={{ position: [0, 1.0, 3.2], fov: 45 }}>
+        {/* Match AvatarDashBoard lighting/contrast */}
+        <ambientLight intensity={1.2} />
+        <directionalLight intensity={1.2} position={[5, 10, 7]} />
+        <hemisphereLight args={["#f0f6ff", "#222222", 0.5]} />
         <Suspense fallback={<Loader />}>
           <Model src={src} />
-          {/* Wrap Environment in its own Suspense to prevent render warnings */}
-          <Suspense fallback={null}>
-            <Environment preset="studio" />
-          </Suspense>
         </Suspense>
         <OrbitControls
           ref={controlsRef}
-          enablePan={false}
+          enablePan={true}
           enableZoom={true}
           autoRotate={false}
           // max/min distances to keep model framed nicely
@@ -70,3 +82,6 @@ export default function AvatarViewer({ src = "/model/soumika.glb" }: { src?: str
     </div>
   );
 }
+
+// Note: This component requires the following packages to be installed in the frontend
+// npm install three @react-three/fiber @react-three/drei
