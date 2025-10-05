@@ -88,7 +88,7 @@ export default function ProfileCreation() {
       if (response.ok) {
         setSubmitMessage({ type: 'success', text: 'Profile saved successfully!' });
         setTimeout(() => {
-          router.push('/');
+          router.push('/profile/view');
         }, 2000);
       } else {
         setSubmitMessage({ 
