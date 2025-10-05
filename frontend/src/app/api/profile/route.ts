@@ -32,7 +32,8 @@ export async function POST(request: Request) {
       weight,
       gender,
       bloodType,
-      medicalRecordFile
+      medicalRecordUrl,
+      medicalRecordFilename
     } = body;
 
     // Validate required fields
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
       weight: weight ? parseFloat(weight) : null,
       gender: gender || null,
       blood_type: bloodType || null,
+      medical_record_url: medicalRecordUrl || null,
+      medical_record_filename: medicalRecordFilename || null,
       updated_at: new Date().toISOString()
     };
 

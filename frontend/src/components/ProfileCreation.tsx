@@ -6,9 +6,11 @@ import { Upload, User, HeartPulse, Ruler, FileText, Sparkles, Activity, Droplet 
 import { useRouter } from "next/navigation";
 import { useUser } from '@auth0/nextjs-auth0/client';
 import AuthButton from "./AuthButton";
+import { supabase } from "@/lib/supabase";
 
 export default function ProfileCreation() {
   const [fileName, setFileName] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fullName, setFullName] = useState<string>("");
   const [age, setAge] = useState<string>("");
   const [heightFeet, setHeightFeet] = useState<string>("");
@@ -26,10 +28,12 @@ export default function ProfileCreation() {
     const file = e.target.files?.[0];
     if (file && file.type === "application/pdf") {
       setFileName(file.name);
+      setSelectedFile(file);
     } else {
       alert("Please upload a valid PDF file.");
       e.target.value = "";
       setFileName("");
+      setSelectedFile(null);
     }
   };
 
@@ -66,6 +70,42 @@ export default function ProfileCreation() {
     setSubmitMessage(null);
 
     try {
+      let medicalRecordUrl = null;
+      let medicalRecordFilename = null;
+
+      // Upload file to Supabase Storage if a file is selected
+      if (selectedFile && user) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.sub}_${Date.now()}.${fileExt}`;
+        const filePath = `medical-records/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('medical-documents')
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('File upload error:', uploadError);
+          setSubmitMessage({ 
+            type: 'error', 
+            text: 'Failed to upload medical document. Please try again.' 
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Get the public URL for the uploaded file
+        const { data: urlData } = supabase.storage
+          .from('medical-documents')
+          .getPublicUrl(filePath);
+
+        medicalRecordUrl = urlData.publicUrl;
+        medicalRecordFilename = selectedFile.name;
+      }
+
+      // Save profile data to database
       const response = await fetch('/api/profile', {
         method: 'POST',
         headers: {
@@ -79,7 +119,8 @@ export default function ProfileCreation() {
           weight,
           gender,
           bloodType,
-          medicalRecordFile: fileName
+          medicalRecordUrl,
+          medicalRecordFilename
         }),
       });
 
@@ -88,7 +129,7 @@ export default function ProfileCreation() {
       if (response.ok) {
         setSubmitMessage({ type: 'success', text: 'Profile saved successfully!' });
         setTimeout(() => {
-          router.push('/');
+          router.push('/dashboard');
         }, 2000);
       } else {
         setSubmitMessage({ 
