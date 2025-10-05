@@ -82,7 +82,7 @@ export default function MedTwinLanding() {
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading your MedTwin...</p>
+          <p className="text-gray-300">Loading Nomi.ai...</p>
         </div>
       </div>
     );
@@ -98,7 +98,7 @@ export default function MedTwinLanding() {
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-red-900 grid place-items-center shadow-lg shadow-blue-900/40 spider-pulse">
               <Sparkles size={16} className="text-white spider-glow" />
             </div>
-            <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">MedTwin</span>
+            <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">Nomi.ai</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
             <a href="#features" className="hover:text-blue-400 transition-colors duration-300 neon-flicker">
@@ -344,16 +344,12 @@ export default function MedTwinLanding() {
               </div>
             </div>
             <div className="rounded-2xl border border-red-600/30 bg-black/60 p-4">
-              <div className="aspect-video rounded-xl bg-gradient-to-br from-blue-600/10 to-red-600/10 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-60 [mask-image:radial-gradient(50%_70%_at_50%_50%,white,transparent)]">
-                  <div className="absolute -inset-24 bg-[conic-gradient(from_120deg,rgba(59,130,246,0.25),rgba(220,38,38,0.15),rgba(59,130,246,0.2))] blur-2xl" />
-                </div>
-                <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-blue-500 rounded-full animate-spin mx-auto mb-2"></div>
-                    <p>Embed your dashboard preview here</p>
-                  </div>
-                </div>
+              <div className="aspect-video rounded-xl relative overflow-hidden flex items-center justify-center">
+                <img
+                  src="/dashboard-preview.png"
+                  alt="Dashboard Preview"
+                  className="rounded-lg max-h-full max-w-full object-contain"
+                />
               </div>
             </div>
           </div>
@@ -431,7 +427,7 @@ export default function MedTwinLanding() {
 
       {/* FOOTER */}
       <footer className="py-10 text-center text-xs text-gray-500 border-t border-blue-600/20">
-        © {new Date().getFullYear()} MedTwin. For demo purposes only.
+        © {new Date().getFullYear()} Nomi.ai. For demo purposes only.
       </footer>
     </div>
   );

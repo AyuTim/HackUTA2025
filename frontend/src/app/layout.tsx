@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MedTwin - Your Digital Health Twin",
+  title: "Nomi.ai - Your Digital Health Twin",
   description: "Upload scans and checkups, visualize a 3D body, simulate what-if scenarios, and carry a tap-to-share health pass.",
 };
 

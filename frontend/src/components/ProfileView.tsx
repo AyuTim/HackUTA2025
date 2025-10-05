@@ -391,7 +391,7 @@ export default function ProfileView() {
           >
             <Sparkles size={12} className="text-blue-400" />
           </motion.div>
-          <span>© {new Date().getFullYear()} MedTwin · For demo purposes only</span>
+          <span>© {new Date().getFullYear()} Nomi.ai · For demo purposes only</span>
           <motion.div
             animate={{ rotate: [360, 0] }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}

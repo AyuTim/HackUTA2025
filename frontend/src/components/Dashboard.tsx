@@ -30,6 +30,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import Link from "next/link";
 
 /* -------------------------
    Mock Data
@@ -216,46 +217,38 @@ export default function MedTwinDashboard() {
               whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Sparkles size={16} className="text-white" />
+              <Link href="/" passHref>
+                <button style={{ all: "unset", cursor: "pointer" }}>
+                  <Sparkles size={16} className="text-white" />
+                </button>
+              </Link>
             </motion.div>
             <div>
-              <div className="font-semibold leading-tight text-white">
-                MedTwin Dashboard
-              </div>
+              <Link href="/" passHref>
+                <button className="font-semibold leading-tight text-white" style={{ all: "unset", cursor: "pointer" }}>
+                  Nomi.ai
+                </button>
+              </Link>
               <div className="text-xs text-gray-400">
-                Peter Parker · Last sync 2m ago
+                Soumika Seelam · Last sync 2m ago
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <motion.button 
-              onClick={() => router.push('/profile')}
-              className="rounded-xl bg-gradient-to-r from-purple-900/50 to-blue-900/50 hover:from-purple-800 hover:to-blue-800 border border-blue-900/50 px-3 py-2 text-sm flex items-center gap-2 transition-all duration-300"
-              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <User size={14} /> View Profile
-            </motion.button>
-            <motion.button 
-              className="rounded-xl bg-blue-900/50 hover:bg-blue-800/50 border border-blue-900/50 px-3 py-2 text-sm flex items-center gap-2 transition-all duration-300"
-              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ShieldCheck size={14} /> Emergency QR
-            </motion.button>
-            <motion.button 
-              className="rounded-xl bg-gradient-to-r from-blue-900 to-red-900 hover:from-blue-800 hover:to-red-800 px-4 py-2 text-sm font-semibold transition-all duration-300"
-              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(127, 29, 29, 0.5)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Open What-If
-            </motion.button>
-
             {/* Streak Indicator */}
             <div className="flex items-center gap-1.5 ml-4">
               <Flame size={18} className="text-orange-400" />
               <span className="text-lg font-bold text-orange-400">7</span>
             </div>
+
+            <motion.button 
+              onClick={() => router.push('/profile')}
+              className="rounded-full bg-gradient-to-r from-purple-900/50 to-blue-900/50 hover:from-purple-800 hover:to-blue-800 border border-blue-900/50 w-11 h-11 flex items-center justify-center transition-all duration-300"
+              whileHover={{ scale: 1.08, boxShadow: "0 0 24px rgba(30, 58, 138, 0.5)" }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <User size={20} />
+            </motion.button>
           </div>
         </div>
       </header>
@@ -607,7 +600,7 @@ export default function MedTwinDashboard() {
               </div>
             </div>
             <div className="grid grid-cols-7 gap-1 text-[10px]">
-              {Array.from({ length: FIRST_WEEKDAY }).map((_, i) => (
+              {Array.from({ length: firstWeekday ?? 0}).map((_, i) => (
                 <div key={`b-${i}`} className="h-7 rounded bg-gray-900/50 opacity-30 border border-blue-900/20" />
               ))}
               {checkins.map((d, i) => (
@@ -679,7 +672,7 @@ export default function MedTwinDashboard() {
           >
             <Sparkles size={12} className="text-blue-400" />
           </motion.div>
-          <span>© {new Date().getFullYear()} MedTwin · Demo UI</span>
+          <span>© {new Date().getFullYear()} Nomi.ai · Demo UI</span>
           <motion.div
             animate={{ rotate: [360, 0] }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}

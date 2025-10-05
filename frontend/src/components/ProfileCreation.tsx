@@ -213,7 +213,7 @@ export default function ProfileCreation() {
               <Sparkles size={16} className="text-white" />
             </motion.div>
             <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">
-              MedTwin
+              Nomi.ai
             </span>
           </motion.div>
           <motion.div 
@@ -552,7 +552,7 @@ export default function ProfileCreation() {
           >
             <Sparkles size={12} className="text-blue-400" />
           </motion.div>
-          <span>© {new Date().getFullYear()} MedTwin. For demo purposes only.</span>
+          <span>© {new Date().getFullYear()} Nomi.ai. For demo purposes only.</span>
           <motion.div
             animate={{ rotate: [360, 0] }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
