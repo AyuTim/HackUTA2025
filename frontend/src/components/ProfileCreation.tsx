@@ -184,6 +184,17 @@ export default function ProfileCreation() {
               Save Profile
             </button>
           </div>
+
+          <div className="pt-4 text-center">
+            <button
+                type="button"
+                onClick={() => router.push("/dashboard")}
+                className="rounded-xl bg-gradient-to-r from-red-600 to-blue-500 px-8 py-3 font-semibold text-white shadow-lg shadow-red-500/30 hover:scale-[1.02] transition"
+            >
+                Go to Dashboard
+            </button>
+            </div>
+
         </motion.form>
           </>
         )}
