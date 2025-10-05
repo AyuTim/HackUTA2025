@@ -180,7 +180,7 @@ export default function Profile() {
                 key={i}
                 title={med.title}
                 description={med.description}
-                color="blue"
+                color={i % 2 === 0 ? "red" : "blue"}
                 opacity={0.85}
               />
             ))}
@@ -198,7 +198,7 @@ export default function Profile() {
                 key={i}
                 title={a.title}
                 description={a.description}
-                color="blue"
+                color={i % 2 === 0 ? "red" : "blue"}
                 opacity={0.85}
               />
             ))}

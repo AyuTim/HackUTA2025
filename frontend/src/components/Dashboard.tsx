@@ -102,6 +102,49 @@ export default function MedTwinDashboard() {
   const [waterCount, setWaterCount] = useState(0);
   const [filledCups, setFilledCups] = useState<boolean[]>(Array(8).fill(false));
   const [sleepHours, setSleepHours] = useState(7.0);
+  const [sleepHoursWhole, setSleepHoursWhole] = useState(7);
+  const [sleepMinutes, setSleepMinutes] = useState(0);
+
+  const handleHoursScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const scrollTop = element.scrollTop;
+    const itemHeight = 40; // height of each item (h-10 = 40px)
+    const containerHeight = 128; // h-32 = 128px
+    const paddingTop = 44; // py-11 = 44px top padding
+    
+    // Calculate which item is at the center of the viewport
+    const centerOfViewport = containerHeight / 2; // 64px from top of viewport
+    const centerInContent = scrollTop + centerOfViewport; // Position in scrollable content
+    const centerRelativeToFirstItem = centerInContent - paddingTop; // Subtract top padding
+    const centeredIndex = Math.round(centerRelativeToFirstItem / itemHeight);
+    const clampedIndex = Math.max(0, Math.min(12, centeredIndex));
+    
+    if (clampedIndex !== sleepHoursWhole) {
+      setSleepHoursWhole(clampedIndex);
+      setSleepHours(clampedIndex + sleepMinutes / 60);
+    }
+  };
+
+  const handleMinutesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const scrollTop = element.scrollTop;
+    const itemHeight = 40;
+    const containerHeight = 128;
+    const paddingTop = 44;
+    
+    const centerOfViewport = containerHeight / 2;
+    const centerInContent = scrollTop + centerOfViewport;
+    const centerRelativeToFirstItem = centerInContent - paddingTop;
+    const centeredIndex = Math.round(centerRelativeToFirstItem / itemHeight);
+    const minutesValues = [0, 15, 30, 45];
+    const clampedIndex = Math.max(0, Math.min(3, centeredIndex));
+    const selectedMinutes = minutesValues[clampedIndex];
+    
+    if (selectedMinutes !== sleepMinutes) {
+      setSleepMinutes(selectedMinutes);
+      setSleepHours(sleepHoursWhole + selectedMinutes / 60);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -333,21 +376,112 @@ export default function MedTwinDashboard() {
 
           {/* SLEEP TRACKER */}
           <Panel title="Sleep Tracker" icon={<Moon size={16} />}>
-            <div className="flex items-center justify-between mb-2 text-sm">
-              <label htmlFor="sleepInput" className="text-zinc-300">
-                Hours slept last night:
-              </label>
-              <input
-                id="sleepInput"
-                type="number"
-                min={0}
-                max={12}
-                step={0.5}
-                value={sleepHours}
-                onChange={(e) => setSleepHours(parseFloat(e.target.value) || 0)}
-                className="w-16 text-center rounded-md bg-black/50 border border-blue-900/30 p-1 text-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
-              />
+            <div className="flex flex-col items-center gap-2">
+              <div className="text-[10px] text-zinc-400 text-center mb-1">
+                Hours slept last night
+              </div>
+              
+              {/* Apple-style 3-Column Time Picker Wheel */}
+              <div className="relative w-full max-w-[350px]">
+                {/* Selection highlight bar */}
+                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-10 bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-y border-blue-500/30 pointer-events-none z-10 rounded-md shadow-lg shadow-blue-900/20" />
+                
+                {/* Gradient overlays for fade effect */}
+                <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#0c0f14] via-[#0c0f14]/80 to-transparent pointer-events-none z-20" />
+                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#0c0f14] via-[#0c0f14]/80 to-transparent pointer-events-none z-20" />
+                
+                {/* 3 Column Layout */}
+                <div className="flex items-center justify-center">
+                  {/* Hours Column */}
+                  <div className="relative h-32 w-16 overflow-y-auto scrollbar-hide" onScroll={handleHoursScroll}>
+                    <div className="py-11">
+                      {Array.from({ length: 13 }).map((_, i) => {
+                        const isSelected = i === sleepHoursWhole;
+                        return (
+                          <motion.button
+                            key={i}
+                            onClick={() => {
+                              setSleepHoursWhole(i);
+                              setSleepHours(i + sleepMinutes / 60);
+                            }}
+                            className={`w-full h-10 flex items-center justify-center transition-all duration-200 ${
+                              isSelected
+                                ? "text-blue-400 font-bold text-2xl drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]"
+                                : "text-zinc-500 text-lg hover:text-zinc-300"
+                            }`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            {i}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Separator Label */}
+                  <div className="text-white text-sm font-medium px-1 relative z-30">
+                    hours
+                  </div>
+                  
+                  {/* Minutes Column */}
+                  <div className="relative h-32 w-16 overflow-y-auto scrollbar-hide" onScroll={handleMinutesScroll}>
+                    <div className="py-11">
+                      {[0, 15, 30, 45].map((min) => {
+                        const isSelected = min === sleepMinutes;
+                        return (
+                          <motion.button
+                            key={min}
+                            onClick={() => {
+                              setSleepMinutes(min);
+                              setSleepHours(sleepHoursWhole + min / 60);
+                            }}
+                            className={`w-full h-10 flex items-center justify-center transition-all duration-200 ${
+                              isSelected
+                                ? "text-blue-400 font-bold text-2xl drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                                : "text-zinc-500 text-lg hover:text-zinc-300"
+                            }`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            {min.toString().padStart(2, '0')}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Minutes Label */}
+                  <div className="text-white text-sm font-medium px-1 relative z-30">
+                    min
+                  </div>
+                </div>
+              </div>
+              
+              {/* Log Button */}
+              <motion.button
+                onClick={() => {
+                  // TODO: Log sleep data
+                  alert(`Logged: ${sleepHoursWhole}h ${sleepMinutes}m of sleep`);
+                }}
+                className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-900/30 hover:bg-blue-900/50 border border-blue-900/50 text-blue-400 text-xs font-medium transition-all"
+                whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(59, 130, 246, 0.3)" }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="text-sm">+</span>
+                <span>Log Sleep</span>
+              </motion.button>
             </div>
+            
+            <style jsx>{`
+              .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+              }
+              .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+              }
+            `}</style>
           </Panel>
 
           {/* SLEEP GRAPH */}

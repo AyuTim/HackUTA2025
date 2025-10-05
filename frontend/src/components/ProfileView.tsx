@@ -266,14 +266,8 @@ export default function ProfileView() {
             >
               <Home size={16} /> Home
             </motion.button>
-            <motion.button
-              onClick={() => router.push('/profile/edit')}
-              className="rounded-xl bg-gradient-to-r from-purple-900/50 to-blue-900/50 hover:from-purple-800 hover:to-blue-800 border border-blue-900/50 px-4 py-2 text-sm flex items-center gap-2"
-              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Edit size={16} /> Edit Profile
-            </motion.button>
+            
+            
             <motion.button
               onClick={() => router.push('/dashboard')}
               className="rounded-xl bg-gradient-to-r  from-purple-900/50 to-blue-900/50 hover:from-purple-800 hover:to-blue-800 border border-blue-900/50 px-4 py-2 text-sm flex items-center gap-2"
@@ -358,21 +352,7 @@ export default function ProfileView() {
              Note: This is sample data. Connect to your medical records to see actual medications.
            </p>
            
-           {/* Request Refill Button */}
-           <div className="mt-6 flex justify-center">
-             <motion.button
-               onClick={() => {
-                 // TODO: Implement refill request logic
-                 alert('Refill request feature coming soon!');
-               }}
-               className="rounded-xl bg-gradient-to-r from-blue-900 to-purple-900 hover:from-blue-800 hover:to-purple-800 border border-blue-900/50 px-6 py-3 text-sm font-semibold flex items-center gap-2 shadow-lg"
-               whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(30, 58, 138, 0.5)" }}
-               whileTap={{ scale: 0.95 }}
-             >
-               <Pill size={18} />
-               Request Refill
-             </motion.button>
-           </div>
+
          </Panel>
 
         {/* Current Ailments */}
