@@ -15,7 +15,7 @@ function Model({ src }: { src: string }) {
   // Lower and center the whole model so it sits nicely in the frame.
   return (
     // nudged a bit lower for better composition
-    <group position={[0, -0.8, 0]} scale={0.9}>
+    <group position={[0, -0.9, 0]} scale={0.9}>
       <primitive ref={ref} object={gltf.scene} />
     </group>
   );
@@ -44,17 +44,17 @@ export default function AvatarViewer({ src = "/model/soumika.glb" }: { src?: str
 
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden">
-      <Canvas camera={{ position: [0, 1.2, 2.8], fov: 40 }}>
-        {/* Darker lighting for a moodier look */}
-        <ambientLight intensity={0.25} />
-        <directionalLight position={[4, 8, 6]} intensity={0.45} />
+      <Canvas camera={{ position: [0, 1.0, 3.2], fov: 45 }}>
+        {/* Match AvatarDashBoard lighting/contrast */}
+        <ambientLight intensity={1.2} />
+        <directionalLight intensity={1.2} position={[5, 10, 7]} />
+        <hemisphereLight args={["#f0f6ff", "#222222", 0.5]} />
         <Suspense fallback={<Loader />}>
           <Model src={src} />
-          <Environment preset="studio" />
         </Suspense>
         <OrbitControls
           ref={controlsRef}
-          enablePan={false}
+          enablePan={true}
           enableZoom={true}
           autoRotate={false}
           // max/min distances to keep model framed nicely
