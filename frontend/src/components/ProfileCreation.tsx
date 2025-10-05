@@ -258,7 +258,7 @@ export default function ProfileCreation() {
               console.error("Error saving to Supabase:", error);
               alert(`Database save failed for ${file.name}: ${error.message}`);
             } else {
-              alert(`✅ ${file.name} saved to database successfully!`);
+              alert(`${file.name} saved to database successfully!`);
               setUploadedFiles((prev) =>
                 Array.from(new Set([...prev, file.name]))
               );
