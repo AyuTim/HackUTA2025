@@ -70,6 +70,3 @@ export default function AvatarViewer({ src = "/model/soumika.glb" }: { src?: str
     </div>
   );
 }
-
-// Note: This component requires the following packages to be installed in the frontend
-// npm install three @react-three/fiber @react-three/drei

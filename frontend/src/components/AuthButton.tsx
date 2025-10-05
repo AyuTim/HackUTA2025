@@ -42,7 +42,7 @@ export default function AuthButton() {
         </div>
         <Link
           href="/api/auth/logout"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-red-900 to-red-800 px-4 py-2 text-sm font-semibold shadow-lg shadow-red-600/30 hover:shadow-red-600/40 transition-all duration-300 hover:scale-105 spider-pulse"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 text-sm font-semibold shadow-lg shadow-red-600/30 hover:shadow-red-600/40 transition-all duration-300 hover:scale-105 spider-pulse"
         >
           <LogOut size={14} />
           Logout

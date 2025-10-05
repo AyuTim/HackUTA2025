@@ -13,6 +13,8 @@ CREATE TABLE profiles (
   weight NUMERIC(5,2),
   gender TEXT,
   blood_type TEXT,
+  medical_record_url TEXT,
+  medical_record_filename TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
