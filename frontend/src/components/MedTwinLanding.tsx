@@ -39,7 +39,7 @@ const Section = ({
 const Glow = ({ className = "" }: { className?: string }) => (
   <div className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(60%_60%_at_50%_40%,black,transparent)]">
     <div
-      className={`absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-600/15 via-red-600/10 to-blue-600/15 blur-3xl ${className}`}
+      className={`absolute -inset-x-40 -top-40 h-[32rem] bg-gradient-to-r from-blue-900/20 via-red-900/15 to-blue-900/20 blur-3xl ${className}`}
     />
   </div>
 );
@@ -64,13 +64,13 @@ export default function MedTwinLanding() {
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       <Glow />
       {/* NAV */}
-      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/50 bg-black/30 border-b border-red-500/20">
+      <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/50 bg-black/30 border-b border-blue-900/30">
         <Section className="flex items-center justify-between py-3">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-red-600 grid place-items-center shadow-lg shadow-blue-600/30 spider-pulse">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-900 to-red-900 grid place-items-center shadow-lg shadow-blue-900/40 spider-pulse">
               <Sparkles size={16} className="text-white spider-glow" />
             </div>
-            <span className="font-bold tracking-wide text-lg spider-text-glow">MedTwin</span>
+            <span className="font-bold tracking-wide text-lg bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">MedTwin</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
             <a href="#features" className="hover:text-blue-400 transition-colors duration-300 neon-flicker">
@@ -100,11 +100,85 @@ export default function MedTwinLanding() {
               transition={{ duration: 0.6 }}
               className="text-4xl md:text-6xl font-bold leading-tight"
             >
-              Your{" "}
-              <span className="spider-gradient-text">
-                digital twin
-              </span>{" "}
-              for personal health.
+              <motion.span
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Your{" "}
+              </motion.span>
+              <motion.span 
+                className="relative inline-block"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <span className="relative z-10 font-extrabold">
+                  <motion.span
+                    className="bg-gradient-to-r from-blue-900 via-purple-800 to-red-900 bg-clip-text text-transparent"
+                    style={{ backgroundSize: "200% 100%" }}
+                    animate={{
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    digital twin
+                  </motion.span>
+                </span>
+                {/* Animated glow layer 1 */}
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-red-900 to-blue-900 blur-2xl"
+                  animate={{
+                    opacity: [0.4, 0.5, 0.4],
+                    scale: [0.98, 1.05, 0.98],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+                {/* Animated glow layer 2 - offset timing */}
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-red-900 to-blue-900 blur-xl"
+                  animate={{
+                    opacity: [0.1, 0.3, 0.1],
+                    scale: [1.05, 0.98, 1.05],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1.5
+                  }}
+                />
+              </motion.span>{" "}
+              <motion.span
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="relative inline-block"
+              >
+                <span className="bg-gradient-to-r from-gray-100 via-blue-00 to-gray-100 bg-clip-text text-transparent">
+                  for personal health.
+                </span>
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/20 to-transparent"
+                  animate={{
+                    x: ["-100%", "100%"],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "linear",
+                    repeatDelay: 1
+                  }}
+                />
+              </motion.span>
             </motion.h1>
             <p className="mt-4 text-gray-300 max-w-xl">
               Upload scans and checkups, visualize a 3D body, simulate what-if
