@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   Brain,
@@ -16,7 +17,6 @@ import {
   Flame,
   Award,
 } from "lucide-react";
-import AvatarDashboard from "./AvatarDashBoard";
 import { useRouter } from "next/navigation";
 import {
   LineChart,
@@ -29,6 +29,104 @@ import {
   Area,
 } from "recharts";
 import Link from "next/link";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+/* -------------------------
+   Supabase (safe client)
+------------------------- */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnon ? createClient(supabaseUrl, supabaseAnon) : null;
+
+/* -------------------------
+   Body-part helpers
+------------------------- */
+type BodyCat =
+  | "head"
+  | "hair"
+  | "stomach"
+  | "legs"
+  | "feet"
+  | "arms"
+  | "unknown";
+
+const PART_MAP: Record<string, Exclude<BodyCat, "unknown">> = {
+  // head & hair
+  brain: "head",
+  neuro: "head",
+  head: "head",
+  scalp: "hair",
+  hair: "hair",
+  // stomach/abdomen
+  stomach: "stomach",
+  abdomen: "stomach",
+  abdominal: "stomach",
+  liver: "stomach",
+  pancreas: "stomach",
+  kidney: "stomach",
+  kidneys: "stomach",
+  renal: "stomach",
+  spleen: "stomach",
+  intestine: "stomach",
+  intestines: "stomach",
+  bowel: "stomach",
+  bladder: "stomach",
+  gastro: "stomach",
+  // legs
+  leg: "legs",
+  legs: "legs",
+  knee: "legs",
+  thigh: "legs",
+  femur: "legs",
+  tibia: "legs",
+  // feet
+  foot: "feet",
+  feet: "feet",
+  ankle: "feet",
+  toe: "feet",
+  toes: "feet",
+  calcaneus: "feet",
+  // arms
+  arm: "arms",
+  arms: "arms",
+  shoulder: "arms",
+  elbow: "arms",
+  wrist: "arms",
+  hand: "arms",
+  humerus: "arms",
+  radius: "arms",
+  ulna: "arms",
+};
+
+function toBodyCategory(raw?: string | null): BodyCat {
+  const t = (raw || "").toLowerCase();
+  for (const key of Object.keys(PART_MAP)) {
+    if (t.includes(key)) return PART_MAP[key];
+  }
+  return "unknown";
+}
+
+function extractBodyPartCategoriesFromAnalyze(json: any): string {
+  const data = json?.data ?? json;
+  const findings = Array.isArray(data?.findings) ? data.findings : [];
+  const cats = new Set<string>();
+  for (const f of findings) {
+    const src = f?.bodyPart || f?.region || "";
+    cats.add(toBodyCategory(src));
+  }
+  return cats.size ? Array.from(cats).join(",") : "unknown";
+}
+
+// Dynamically import AvatarDashboard with no SSR to prevent Canvas initialization issues
+const AvatarDashboard = dynamic(() => import("./AvatarDashBoard"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Loading avatar...</div>
+    </div>
+  ),
+});
 
 /* -------------------------
    Doc: Full-screen overlay
@@ -136,8 +234,12 @@ function DocBubbleMini({ onClick }: { onClick: () => void }) {
       </svg>
 
       {/* subtle halo */}
-      <span className="pointer-events-none absolute w-[220px] h-[220px] rounded-full blur-3xl opacity-40 group-hover:opacity-60 transition-opacity"
-        style={{ background: "radial-gradient(circle, rgba(96,165,250,.45), rgba(15,23,42,0))" }}
+      <span
+        className="pointer-events-none absolute w-[220px] h-[220px] rounded-full blur-3xl opacity-40 group-hover:opacity-60 transition-opacity"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(96,165,250,.45), rgba(15,23,42,0))",
+        }}
       />
     </button>
   );
@@ -196,14 +298,13 @@ function Panel({ title, icon, children, className = "" }: PanelProps) {
 }
 
 /* -------------------------
-   Main Dashboard Component
+   Main Dashboard
 ------------------------- */
 export default function MedTwinDashboard() {
   const router = useRouter();
   const [waterCount, setWaterCount] = useState(0);
   const [filledCups, setFilledCups] = useState<boolean[]>(Array(8).fill(false));
   const [sleepHours, setSleepHours] = useState(7.0);
-  // client-only date/checkin state to avoid hydration mismatch
   const [daysInMonth, setDaysInMonth] = useState<number | null>(null);
   const [firstWeekday, setFirstWeekday] = useState<number | null>(null);
   const [checkins, setCheckins] = useState<Array<{ day: number; ok: boolean }>>(
@@ -211,7 +312,7 @@ export default function MedTwinDashboard() {
   );
   const [checkedCount, setCheckedCount] = useState<number>(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const now = new Date();
     const YEAR = now.getFullYear();
     const MONTH = now.getMonth();
@@ -227,6 +328,7 @@ export default function MedTwinDashboard() {
     setFirstWeekday(FIRST_WEEKDAY);
     setCheckedCount(generated.filter((d) => d.ok).length);
   }, []);
+
   const [sleepHoursWhole, setSleepHoursWhole] = useState(7);
   const [sleepMinutes, setSleepMinutes] = useState(0);
 
@@ -279,6 +381,95 @@ export default function MedTwinDashboard() {
     }
   };
 
+  /* ---------- Right-column: Upload PDF with DB insert ---------- */
+  const [dashUploads, setDashUploads] = useState<string[]>([]);
+  const [dashIsAnalyzing, setDashIsAnalyzing] = useState(false);
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
+  const handleDashPdfUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const pdfs = files.filter(
+      (f) =>
+        f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    const nonPdfs = files.filter(
+      (f) =>
+        !(f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"))
+    );
+
+    if (nonPdfs.length) {
+      alert(
+        `Ignored non-PDF files:\n- ${nonPdfs.map((f) => f.name).join("\n- ")}`
+      );
+    }
+    if (!pdfs.length) {
+      e.target.value = "";
+      return;
+    }
+
+    setDashIsAnalyzing(true);
+
+    for (const file of pdfs) {
+      try {
+        // 1) analyze with backend
+        const form = new FormData();
+        form.append("pdf", file);
+        form.append("mode", "json");
+        const resp = await fetch(`${API_BASE}/api/pdf/analyze`, {
+          method: "POST",
+          body: form,
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          const msg = err?.detail || `Analyze failed (${resp.status})`;
+          alert(`${file.name}: ${msg}`);
+          continue;
+        }
+
+        const analyzeJson = await resp.json();
+
+        // 2) derive body_part + build insert payload
+        const bodyPartCsv = extractBodyPartCategoriesFromAnalyze(analyzeJson);
+        const docType = "Medical Report";
+        const filePathGuess = `uploads/${file.name}`; // adjust if you use storage
+
+        // 3) insert into Supabase
+        if (supabase) {
+          const { error } = await supabase.from("documents").insert([
+            {
+              file_name: file.name,
+              file_path: filePathGuess,
+              document_type: docType,
+              extracted_text: JSON.stringify(analyzeJson),
+              body_part: bodyPartCsv,
+            },
+          ]);
+
+          if (error) {
+            alert(`Database save failed for ${file.name}: ${error.message}`);
+            continue;
+          }
+        } else {
+          console.warn("Supabase env missing; skipping DB insert.");
+        }
+
+        // 4) UI updates + success alert
+        setDashUploads((prev) => Array.from(new Set([...prev, file.name])));
+        alert(`✅ ${file.name} analyzed and saved to database successfully!`);
+      } catch (err: any) {
+        alert(`${file.name}: ${err?.message || "Upload failed"}`);
+      }
+    }
+
+    setDashIsAnalyzing(false);
+    e.target.value = "";
+  };
+
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* Animated glowing background */}
@@ -310,7 +501,35 @@ export default function MedTwinDashboard() {
         />
       </div>
 
-      {/* Header (UNCHANGED except no Doc orb here) */}
+      {/* Spider Web Decorations */}
+      <div className="pointer-events-none absolute inset-0 opacity-15">
+        {/* Top Right Web */}
+        <svg className="absolute top-0 right-0 w-64 h-64" viewBox="0 0 200 200">
+          <path
+            d="M200 0 L100 100 L200 100 Z M200 0 L120 20 M200 20 L140 40 M200 40 L160 60 M200 60 L180 80"
+            stroke="white"
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <circle cx="100" cy="100" r="4" fill="white" />
+        </svg>
+
+        {/* Bottom Left Web */}
+        <svg
+          className="absolute bottom-10 left-10 w-64 h-64"
+          viewBox="0 0 200 200"
+        >
+          <path
+            d="M0 200 L100 100 L0 100 Z M0 200 L80 180 M0 180 L60 160 M0 160 L40 140 M0 140 L20 120"
+            stroke="white"
+            strokeWidth="1.5"
+            fill="none"
+          />
+          <circle cx="100" cy="100" r="4" fill="white" />
+        </svg>
+      </div>
+
+      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-blue-900/30 bg-black/60 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -340,7 +559,6 @@ export default function MedTwinDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Streak Indicator */}
             <div className="flex items-center gap-1.5 ml-4">
               <Flame size={18} className="text-orange-400" />
               <span className="text-lg font-bold text-orange-400">7</span>
@@ -453,7 +671,10 @@ export default function MedTwinDashboard() {
           </Panel>
 
           {/* WATER GRAPH */}
-          <Panel title="Water Intake (Past 5 Days)" icon={<Activity size={16} />}>
+          <Panel
+            title="Water Intake (Past 5 Days)"
+            icon={<Activity size={16} />}
+          >
             <div className="flex justify-center">
               <ResponsiveContainer width="90%" height={150}>
                 <AreaChart
@@ -577,7 +798,9 @@ export default function MedTwinDashboard() {
 
               <motion.button
                 onClick={() => {
-                  alert(`Logged: ${sleepHoursWhole}h ${sleepMinutes}m of sleep`);
+                  alert(
+                    `Logged: ${sleepHoursWhole}h ${sleepMinutes}m of sleep`
+                  );
                 }}
                 className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-900/30 hover:bg-blue-900/50 border border-blue-900/50 text-blue-400 text-xs font-medium transition-all"
                 whileHover={{
@@ -603,7 +826,10 @@ export default function MedTwinDashboard() {
           </Panel>
 
           {/* SLEEP GRAPH */}
-          <Panel title="Sleep Duration (Past 5 Days)" icon={<Activity size={16} />}>
+          <Panel
+            title="Sleep Duration (Past 5 Days)"
+            icon={<Activity size={16} />}
+          >
             <div className="flex justify-center">
               <ResponsiveContainer width="90%" height={150}>
                 <LineChart
@@ -646,7 +872,11 @@ export default function MedTwinDashboard() {
 
         {/* CENTER COLUMN */}
         <div className="col-span-12 md:col-span-6 flex flex-col gap-5 items-center">
-          <Panel title="3D Avatar" icon={<Brain size={16} />} className="w-full">
+          <Panel
+            title="3D Avatar"
+            icon={<Brain size={16} />}
+            className="w-full"
+          >
             <div className="aspect-[3/4] rounded-xl overflow-hidden">
               <div className="w-full h-full">
                 <AvatarDashboard />
@@ -668,7 +898,6 @@ export default function MedTwinDashboard() {
           </Panel>
 
           <Panel title="Monthly Check-ins" icon={<CalendarCheck2 size={16} />}>
-            {/* Streak and Points - Compact */}
             <div className="grid grid-cols-2 gap-2 mb-2">
               <motion.div
                 className="flex items-center justify-center gap-1 bg-gradient-to-br from-orange-900/20 to-red-900/20 border border-orange-900/30 rounded-md px-2 py-1"
@@ -722,7 +951,7 @@ export default function MedTwinDashboard() {
 
           <Panel title="Refill Countdown" icon={<Pill size={16} />}>
             <div className="text-sm text-gray-300">
-              Refill atorvastatin in <b className="text-blue-400">5 days</b>.
+              Refill omeprazole in <b className="text-blue-400">5 days</b>.
             </div>
             <div className="mt-2 h-2 rounded-full bg-gray-900/50 border border-blue-900/30 overflow-hidden">
               <motion.div
@@ -759,6 +988,75 @@ export default function MedTwinDashboard() {
               </li>
             </ul>
           </Panel>
+
+          {/* NEW: Upload PDF (analyze + DB insert + alert) */}
+          <Panel title="Upload PDF" icon={<Stethoscope size={16} />}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3 bg-black/50 border border-dashed border-blue-900/40 hover:border-red-900/50 rounded-xl px-4 py-4 transition-all duration-300">
+                <div className="text-sm text-gray-300">
+                  {dashUploads.length ? (
+                    <span className="text-emerald-400 font-medium">
+                      {dashUploads.length} uploaded
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Upload medical PDFs</span>
+                  )}
+                </div>
+
+                <label className="relative cursor-pointer bg-gradient-to-r from-blue-900 to-red-900 px-4 py-2 rounded-xl text-sm font-semibold shadow-lg hover:shadow-blue-900/50 transition-all duration-300">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    multiple
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={handleDashPdfUpload}
+                  />
+                  <span className="inline-flex items-center gap-2">
+                    <Sparkles size={14} />
+                    Upload
+                  </span>
+                </label>
+              </div>
+
+              {dashIsAnalyzing && (
+                <div className="flex items-center gap-2 text-blue-300 text-sm">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                    />
+                  </svg>
+                  <span>Analyzing…</span>
+                </div>
+              )}
+
+              {dashUploads.length > 0 && (
+                <div className="rounded-lg border border-blue-900/30 bg-black/40 p-3">
+                  <div className="text-xs text-gray-400 mb-2">
+                    Recent uploads
+                  </div>
+                  <ul className="text-xs text-gray-300 space-y-1 max-h-28 overflow-auto">
+                    {dashUploads.map((n) => (
+                      <li key={n} className="truncate">
+                        • {n}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </Panel>
         </div>
       </main>
 
@@ -786,7 +1084,11 @@ export default function MedTwinDashboard() {
       </motion.footer>
 
       {/* Full-screen Doc overlay */}
-      <DocOverlay open={docOpen} onClose={() => setDocOpen(false)} src={DOC_URL} />
+      <DocOverlay
+        open={docOpen}
+        onClose={() => setDocOpen(false)}
+        src={DOC_URL}
+      />
     </div>
   );
 }
